@@ -21,10 +21,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Enable corepack
         run: corepack enable
+
+      - name: Prepare pnpm compatible with Node 22
+        run: corepack prepare pnpm@11.2.2 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
