@@ -1,0 +1,32 @@
+{
+  "documents": [
+    {
+      "id": "manual.zh-CN",
+      "key": "manual",
+      "locale": "zh-CN",
+      "title": "使用手册 (简体中文)",
+      "file": "manual.zh-CN.md"
+    },
+    {
+      "id": "manual.en-US",
+      "key": "manual",
+      "locale": "en-US",
+      "title": "User Manual (English)",
+      "file": "manual.en-US.md"
+    },
+    {
+      "id": "help.zh-CN",
+      "key": "help",
+      "locale": "zh-CN",
+      "title": "常见帮助 (简体中文)",
+      "file": "help.zh-CN.md"
+    },
+    {
+      "id": "help.en-US",
+      "key": "help",
+      "locale": "en-US",
+      "title": "FAQ & Help (English)",
+      "file": "help.en-US.md"
+    }
+  ]
+}
