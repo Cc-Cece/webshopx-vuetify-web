@@ -1568,7 +1568,7 @@
                 rounded="lg"
                 class="text-caption font-weight-bold px-6"
                 :loading="saving"
-                @click="saveAllSettings"
+                @click="saveConfirmDialog = true"
               >
                 {{ $t('admin.uiText.autoHtml.k0554') }}
               </v-btn>
@@ -1577,23 +1577,70 @@
         </div>
       </v-slide-y-reverse-transition>
 
-      <!-- 悬浮保存按钮 (FAB) - 当没有未保存修改时展示 -->
-      <v-slide-y-reverse-transition>
-        <div v-if="(mdAndUp || showDetail) && !hasUnsavedChanges" class="fab-container">
-          <v-btn
-            color="primary"
-            prepend-icon="mdi-content-save"
-            size="large"
-            :class="['hover-scale', 'border', 'rounded-pill', 'font-weight-bold', 'px-6']"
-            variant="elevated"
-            elevation="4"
-            :loading="saving"
-            @click="saveAllSettings"
+      <!-- 确认保存修改对话框 (Premium Glassmorphic Save Confirmation Dialog) -->
+      <v-dialog v-model="saveConfirmDialog" max-width="500" class="glass-dialog">
+        <v-card elevation="0" variant="outlined" class="rounded-xl pa-6 bg-surface border">
+          <div class="d-flex align-center justify-space-between mb-4">
+            <h3 class="text-h6 font-weight-black text-slate-800 d-flex align-center">
+              <v-icon color="primary" class="mr-2">mdi-content-save-alert-outline</v-icon>
+              确认保存配置修改
+            </h3>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="saveConfirmDialog = false"></v-btn>
+          </div>
+
+          <p class="text-caption text-medium-emphasis mb-4">
+            系统检测到您已修改了以下模块的配置，保存后将以增量、串行的队列方式安全写入数据库，以防止写入冲突和锁库风险。请仔细核对您的修改：
+          </p>
+
+          <!-- 修改模块列表 -->
+          <v-list class="bg-transparent border rounded-xl py-2 mb-4 bg-light-soft" density="compact">
+            <v-list-item
+              v-for="moduleItem in dirtyModules"
+              :key="moduleItem.name"
+              :prepend-icon="moduleItem.icon"
+              class="text-slate-800 font-weight-bold"
+            >
+              <v-list-item-title class="font-weight-bold">{{ $t(moduleItem.titleKey) }}</v-list-item-title>
+              <template #append>
+                <v-chip color="warning" size="x-small" variant="flat" class="font-weight-bold text-white">已修改</v-chip>
+              </template>
+            </v-list-item>
+          </v-list>
+
+          <v-alert
+            type="info"
+            variant="tonal"
+            density="compact"
+            class="rounded-lg mb-4 text-caption"
           >
-            {{ $t('admin.uiText.autoHtml.k0383') }}
-          </v-btn>
-        </div>
-      </v-slide-y-reverse-transition>
+            串行更新预计总耗时：{{ dirtyModules.length * 80 }} 毫秒。在此期间请勿刷新或关闭页面。
+          </v-alert>
+
+          <v-divider class="my-4"></v-divider>
+
+          <div class="d-flex justify-end gap-2">
+            <v-btn
+              variant="text"
+              color="secondary"
+              rounded="lg"
+              class="text-caption font-weight-bold"
+              @click="saveConfirmDialog = false"
+            >
+              {{ $t('admin.uiText.autoHtml.k0553') }}
+            </v-btn>
+            <v-btn
+              color="primary"
+              variant="flat"
+              rounded="lg"
+              class="text-caption font-weight-bold px-6"
+              :loading="saving"
+              @click="async () => { saveConfirmDialog = false; await saveAllSettings(); }"
+            >
+              确认保存
+            </v-btn>
+          </div>
+        </v-card>
+      </v-dialog>
 
       <!-- 保存成功通知气泡 -->
       <v-snackbar v-model="snackbar" color="success" location="bottom right" :timeout="3000" class="rounded-lg">
@@ -2588,6 +2635,30 @@ const editingLimit = ref<any>({
 const originalLimitationConfig = ref<any>({})
 const originalWebshopRuntime = ref<any>({})
 const initialSettingsSnapshot = ref('')
+const saveConfirmDialog = ref(false)
+
+const dirtyModules = computed(() => {
+  const list: { name: string; titleKey: string; icon: string }[] = []
+  if (isModuleDirty('economy')) {
+    list.push({ name: 'economy', titleKey: 'admin.uiText.tabLabelEconomy', icon: 'mdi-currency-usd' })
+  }
+  if (isModuleDirty('products')) {
+    list.push({ name: 'products', titleKey: 'admin.uiText.tabLabelProducts', icon: 'mdi-basket-outline' })
+  }
+  if (isModuleDirty('permissions')) {
+    list.push({ name: 'permissions', titleKey: 'admin.uiText.tabLabelMarket', icon: 'mdi-shield-account-outline' })
+  }
+  if (isModuleDirty('frontend')) {
+    list.push({ name: 'frontend', titleKey: 'admin.uiText.tabLabelFrontend', icon: 'mdi-monitor-dashboard' })
+  }
+  if (isModuleDirty('backend')) {
+    list.push({ name: 'backend', titleKey: 'admin.uiText.tabLabelBackend', icon: 'mdi-server' })
+  }
+  if (isModuleDirty('other')) {
+    list.push({ name: 'other', titleKey: 'admin.uiText.tabLabelOther', icon: 'mdi-dots-horizontal-circle-outline' })
+  }
+  return list
+})
 
 function getCurrentSettingsSnapshot(): string {
   return JSON.stringify({
