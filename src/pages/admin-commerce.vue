@@ -370,6 +370,7 @@
       <!-- Products Upsert Dialogue -->
       <v-dialog v-model="upsertDialog" max-width="880" scrollable>
         <v-card elevation="0" variant="outlined" class="rounded-xl bg-white border-card-top-success pa-4">
+          <!-- Dialog Header -->
           <div class="d-flex align-center justify-space-between mb-4">
             <div class="d-flex align-center">
               <v-avatar color="success-lighten-5" size="40" class="mr-3 border">
@@ -385,420 +386,873 @@
             <v-btn icon="mdi-close" variant="text" size="small" @click="upsertDialog = false"></v-btn>
           </div>
 
-          <v-divider class="mb-4"></v-divider>
+          <v-divider class="mb-2"></v-divider>
+
+          <!-- Required / Optional Form Tabs Menu -->
+          <v-tabs v-model="formTab" color="success" density="comfortable" grow class="mb-4 bg-grey-lighten-5 rounded-lg pa-1">
+            <v-tab value="required" class="font-weight-black text-caption">
+              <v-icon start size="16">mdi-alert-circle-outline</v-icon>
+              必填配置 (Required)
+            </v-tab>
+            <v-tab value="optional" class="font-weight-black text-caption">
+              <v-icon start size="16">mdi-cog-outline</v-icon>
+              可选配置 (Optional)
+            </v-tab>
+          </v-tabs>
 
           <v-card-text class="pa-0 overflow-y-auto" style="max-height: 620px;">
             <v-form ref="upsertFormRef" v-model="upsertValid">
-              <!-- Basic fields section -->
-              <h4 class="text-caption font-weight-black text-success mb-3 d-flex align-center">
-                <v-icon start size="16">mdi-information-outline</v-icon>
-                1. 基础挂牌信息 (Basic Info)
-              </h4>
-              <v-row dense>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="formProduct.sku"
-                    label="SKU (唯一编码)"
-                    placeholder="例如：vip_monthly"
-                    variant="outlined"
-                    density="comfortable"
-                    rounded="lg"
-                    color="success"
-                    class="mb-3 font-mono font-weight-bold"
-                    :disabled="editMode"
-                    :rules="[v => !!v || '请输入 SKU 唯一标识']"
-                    required
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-text-field
-                    v-model="formProduct.title"
-                    label="商品标题"
-                    placeholder="玩家端展示的中文标题"
-                    variant="outlined"
-                    density="comfortable"
-                    rounded="lg"
-                    color="success"
-                    class="mb-3 font-weight-bold"
-                    :rules="[v => !!v || '请输入商品标题']"
-                    required
-                  ></v-text-field>
-                </v-col>
-              </v-row>
-
-              <v-row dense>
-                <v-col cols="12" sm="4">
-                  <v-text-field
-                    v-model.number="formProduct.price"
-                    type="number"
-                    label="售价"
-                    placeholder="100"
-                    variant="outlined"
-                    density="comfortable"
-                    rounded="lg"
-                    color="success"
-                    class="mb-3"
-                    :rules="[v => v !== null && v !== undefined || '请输入价格', v => v >= 0 || '价格不可为负数']"
-                    required
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" sm="4">
-                  <v-select
-                    v-model="formProduct.currency"
-                    :items="currencyOptions"
-                    item-title="title"
-                    item-value="value"
-                    label="交易币种"
-                    variant="outlined"
-                    density="comfortable"
-                    rounded="lg"
-                    color="success"
-                    class="mb-3"
-                  ></v-select>
-                </v-col>
-                <v-col cols="12" sm="4">
-                  <v-select
-                    v-model="formProduct.productType"
-                    :items="productTypeOptions"
-                    item-title="title"
-                    item-value="value"
-                    label="商品类型"
-                    variant="outlined"
-                    density="comfortable"
-                    rounded="lg"
-                    color="success"
-                    class="mb-3"
-                  ></v-select>
-                </v-col>
-              </v-row>
-
-              <!-- Dynamic parameters based on Type -->
-              <h4 class="text-caption font-weight-black text-success mb-3 mt-2 d-flex align-center">
-                <v-icon start size="16">mdi-truck-delivery-outline</v-icon>
-                2. 发货交付模式与参数 (Delivery Mode)
-              </h4>
-              
-              <!-- COMMAND / RECYCLE_COMMAND_ITEM templates -->
-              <v-expand-transition>
-                <div v-if="formProduct.productType === 'COMMAND' || formProduct.productType === 'RECYCLE_COMMAND_ITEM'">
-                  <v-text-field
-                    v-model="formProduct.commandTemplate"
-                    :label="formProduct.productType === 'COMMAND' ? '发货指令模板 (Command)' : '回收检测指令模板 (Recycle Command)'"
-                    placeholder="例如：give %player% minecraft:diamond %amount%  或  clear %player% minecraft:diamond %amount%"
-                    variant="outlined"
-                    density="comfortable"
-                    rounded="lg"
-                    color="success"
-                    class="mb-3 font-mono text-caption"
-                    :rules="[v => !!v || '请输入对应的发货或回收指令模板']"
-                  ></v-text-field>
-                </div>
-              </v-expand-transition>
-
-              <!-- POTION_EFFECT type parameters -->
-              <v-expand-transition>
-                <div v-if="formProduct.productType === 'POTION_EFFECT'">
+              <v-window v-model="formTab" class="pa-1">
+                
+                <!-- TAB 1: REQUIRED FIELDS (必填) -->
+                <v-window-item value="required">
+                  <!-- 1.1 基础信息 (Basic Info) -->
+                  <h4 class="text-caption font-weight-black text-success mb-3 d-flex align-center">
+                    <v-icon start size="16">mdi-information-outline</v-icon>
+                    1. 基础挂牌信息 (Basic Info) *必填
+                  </h4>
+                  
                   <v-row dense>
                     <v-col cols="12" sm="6">
                       <v-text-field
-                        v-model="formProduct.effectType"
-                        label="药水效果类别 (effectType)"
-                        placeholder="例如：minecraft:speed、minecraft:strength"
+                        v-model="formProduct.sku"
+                        label="SKU (唯一编码) *"
+                        placeholder="例如：vip_monthly"
                         variant="outlined"
                         density="comfortable"
                         rounded="lg"
                         color="success"
-                        class="mb-3 font-mono"
-                        :rules="[v => !!v || '请输入药水效果标识']"
+                        class="mb-3 font-mono font-weight-bold"
+                        :disabled="editMode"
+                        :rules="[v => !!v || '请输入 SKU 唯一标识']"
+                        required
                       ></v-text-field>
                     </v-col>
-                    <v-col cols="6" sm="3">
+                    <v-col cols="12" sm="6">
                       <v-text-field
-                        v-model.number="formProduct.effectSeconds"
-                        type="number"
-                        label="生效时长 (秒)"
-                        placeholder="300"
+                        v-model="formProduct.title"
+                        label="商品标题 *"
+                        placeholder="玩家端展示的中文标题"
                         variant="outlined"
                         density="comfortable"
                         rounded="lg"
                         color="success"
-                        class="mb-3"
-                      ></v-text-field>
-                    </v-col>
-                    <v-col cols="6" sm="3">
-                      <v-text-field
-                        v-model.number="formProduct.effectAmplifier"
-                        type="number"
-                        label="效果倍率 (0 = I级)"
-                        placeholder="0"
-                        variant="outlined"
-                        density="comfortable"
-                        rounded="lg"
-                        color="success"
-                        class="mb-3"
+                        class="mb-3 font-weight-bold"
+                        :rules="[v => !!v || '请输入商品标题']"
+                        required
                       ></v-text-field>
                     </v-col>
                   </v-row>
-                </div>
-              </v-expand-transition>
 
-              <!-- GIVE_ITEM / GIVE_CUSTOM_ITEM / RECYCLE_ITEM / RECYCLE_CUSTOM_ITEM parameters -->
-              <v-expand-transition>
-                <div v-if="['GIVE_ITEM', 'GIVE_CUSTOM_ITEM', 'RECYCLE_ITEM', 'RECYCLE_CUSTOM_ITEM'].includes(formProduct.productType)">
                   <v-row dense>
                     <v-col cols="12" sm="4">
                       <v-text-field
-                        v-model="formProduct.itemMaterial"
-                        label="原版物品材质名 (Material Key)"
-                        placeholder="例如：DIAMOND_SWORD, OAK_LOG"
+                        v-model.number="formProduct.price"
+                        type="number"
+                        label="售价 *"
+                        placeholder="100"
                         variant="outlined"
                         density="comfortable"
                         rounded="lg"
                         color="success"
-                        class="mb-3 font-mono"
-                        :rules="[v => !!v || '请输入物品材质键']"
+                        class="mb-3 font-weight-bold"
+                        :rules="[v => v !== null && v !== undefined || '请输入价格', v => v >= 0 || '价格不可为负数']"
+                        required
                       ></v-text-field>
                     </v-col>
                     <v-col cols="12" sm="4">
-                      <v-text-field
-                        v-model="formProduct.displayMaterial"
-                        label="前端预览图标材质 (可留空)"
-                        placeholder="留空即默认与上方发货材质一致"
+                      <v-select
+                        v-model="formProduct.currency"
+                        :items="currencyOptions"
+                        item-title="title"
+                        item-value="value"
+                        label="交易币种 *"
                         variant="outlined"
                         density="comfortable"
                         rounded="lg"
                         color="success"
-                        class="mb-3 font-mono"
-                      ></v-text-field>
+                        class="mb-3 font-weight-bold"
+                      ></v-select>
                     </v-col>
                     <v-col cols="12" sm="4">
-                      <v-text-field
-                        v-model="formProduct.displayNameOverride"
-                        label="翻译名称覆盖 (可留空)"
-                        placeholder="例如：极品附魔大剑"
+                      <v-select
+                        v-model="formProduct.productType"
+                        :items="productTypeOptions"
+                        item-title="title"
+                        item-value="value"
+                        label="商品类型 *"
                         variant="outlined"
                         density="comfortable"
                         rounded="lg"
                         color="success"
-                        class="mb-3"
-                      ></v-text-field>
+                        class="mb-3 font-weight-bold"
+                      ></v-select>
                     </v-col>
                   </v-row>
-                </div>
-              </v-expand-transition>
 
-              <!-- Stock & limits -->
-              <v-row dense>
-                <v-col cols="12" sm="4">
-                  <v-text-field
-                    v-model.number="formProduct.itemAmount"
-                    type="number"
-                    label="设定库存总量"
-                    placeholder="不限填空"
-                    variant="outlined"
-                    density="comfortable"
-                    rounded="lg"
-                    color="success"
-                    class="mb-3"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" sm="4">
-                  <v-text-field
-                    v-model.number="formProduct.perUserLimit"
-                    type="number"
-                    label="玩家终身限购件数"
-                    placeholder="不限填空"
-                    variant="outlined"
-                    density="comfortable"
-                    rounded="lg"
-                    color="success"
-                    class="mb-3"
-                  ></v-text-field>
-                </v-col>
-                <v-col cols="12" sm="4" class="d-flex align-center justify-center">
-                  <settings-switch
-                    v-model="formProduct.active"
-                    color="success"
-                    :label="formProduct.active ? '商品立即启用上架' : '新建暂存仓库下架'"
-                    density="comfortable"
-                    hide-details
-                  ></settings-switch>
-                </v-col>
-              </v-row>
+                  <!-- 1.2 商品类型特定参数 (Type-specific parameters) -->
+                  <h4 class="text-caption font-weight-black text-success mb-3 mt-4 d-flex align-center">
+                    <v-icon start size="16">mdi-truck-delivery-outline</v-icon>
+                    2. 发货及特定类型详情 (Delivery Type Parameters) *必填
+                  </h4>
 
-              <v-text-field
-                v-model="formProduct.remark"
-                label="玩家端展示说明备注 (Remark)"
-                placeholder="详细说明物品的获取路径或附加的权利要求等..."
-                variant="outlined"
-                density="comfortable"
-                rounded="lg"
-                color="success"
-                class="mb-3"
-              ></v-text-field>
-
-              <!-- Dynamic Pricing Card (with v-switch) -->
-              <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 bg-grey-lighten-5 mb-4 mt-2 border-warning-dashed">
-                <div class="d-flex align-center justify-space-between flex-wrap mb-3">
-                  <div class="d-flex align-center">
-                    <settings-switch
-                      v-model="formProduct.dynamicPricingEnabled"
-                      color="warning"
-                      label="启用经济学动态价格策略"
-                      hide-details
-                      density="comfortable"
-                      class="mr-4 text-warning"
-                    ></settings-switch>
-                    <span class="text-caption text-medium-emphasis">根据全服物品购买/回收热度计算交易价，控制通货膨胀。</span>
-                  </div>
-                  <v-chip v-if="formProduct.dynamicPricingEnabled" size="x-small" color="warning" class="font-weight-black">ACTIVE</v-chip>
-                </div>
-
-                <v-expand-transition>
-                  <div v-if="formProduct.dynamicPricingEnabled">
-                    <v-row dense>
-                      <v-col cols="12" sm="6">
-                        <v-select
-                          v-model="formProduct.dynamicAlgorithm"
-                          :items="pricingAlgorithms"
-                          item-title="title"
-                          item-value="value"
-                          label="动态波动计算模型"
-                          variant="outlined"
-                          density="comfortable"
-                          rounded="lg"
-                          color="warning"
-                          class="mb-3"
-                        ></v-select>
-                      </v-col>
-                      <v-col cols="12" sm="6">
-                        <v-text-field
-                          v-model.number="formProduct.dynamicPriceStep"
-                          type="number"
-                          label="波动步长价格比例 (Price Step)"
-                          placeholder="例如 1，留空=1"
-                          variant="outlined"
-                          density="comfortable"
-                          rounded="lg"
-                          color="warning"
-                          class="mb-3"
-                        ></v-text-field>
-                      </v-col>
-                    </v-row>
-
-                    <v-row dense>
-                      <v-col cols="12" sm="4">
-                        <v-text-field
-                          v-model.number="formProduct.dynamicBasePrice"
-                          type="number"
-                          label="基础核心定价 (Base Price)"
-                          placeholder="默认与售价一致"
-                          variant="outlined"
-                          density="comfortable"
-                          rounded="lg"
-                          color="warning"
-                          class="mb-3"
-                        ></v-text-field>
-                      </v-col>
-                      <v-col cols="12" sm="4">
-                        <v-text-field
-                          v-model.number="formProduct.dynamicFloorPrice"
-                          type="number"
-                          label="保底地板限价 (Floor Price)"
-                          placeholder="留空即表示无底价"
-                          variant="outlined"
-                          density="comfortable"
-                          rounded="lg"
-                          color="warning"
-                          class="mb-3"
-                        ></v-text-field>
-                      </v-col>
-                      <v-col cols="12" sm="4">
-                        <v-text-field
-                          v-model.number="formProduct.dynamicCapPrice"
-                          type="number"
-                          label="抗通胀封顶售价 (Cap Price)"
-                          placeholder="留空即表示无最高价"
-                          variant="outlined"
-                          density="comfortable"
-                          rounded="lg"
-                          color="warning"
-                          class="mb-3"
-                        ></v-text-field>
-                      </v-col>
-                    </v-row>
-
-                    <!-- Advanced JSON parameters overrides -->
-                    <v-textarea
-                      v-model="rawPricingParams"
-                      label="自定义波动参数 JSON 覆盖"
-                      placeholder='例如线性算法可以微调需求弹性系数：{"elasticity": 1.2, "panicMultiplier": 1.5}'
-                      variant="outlined"
-                      density="comfortable"
-                      rounded="lg"
-                      color="warning"
-                      rows="2"
-                      hide-details
-                      class="font-mono text-caption mt-1"
-                    ></v-textarea>
-                  </div>
-                </v-expand-transition>
-              </v-card>
-
-              <!-- Upload icon panel if edit mode -->
-              <v-fade-transition>
-                <v-card v-if="editMode" elevation="0" variant="outlined" class="rounded-xl pa-4 bg-grey-lighten-5 mb-4 border">
-                  <h4 class="text-caption font-weight-black text-slate-800 mb-2">绑定独立商品高保真图标</h4>
-                  <div class="d-flex align-center flex-wrap">
-                    <v-avatar size="72" rounded="lg" color="white" class="mr-4 border">
-                      <McIcon
-                        :material="formProduct.displayMaterial || formProduct.itemMaterial"
-                        :icon-url="formProduct.displayIconPath"
-                        :size="48"
-                        color="success"
-                      />
-                    </v-avatar>
-                    <div class="my-2">
-                      <v-file-input
-                        label="点击上传本地 PNG/WEBP 图标"
-                        accept="image/*"
+                  <!-- COMMAND / RECYCLE_COMMAND_ITEM parameters -->
+                  <v-expand-transition>
+                    <div v-if="formProduct.productType === 'COMMAND' || formProduct.productType === 'RECYCLE_COMMAND_ITEM'">
+                      <v-textarea
+                        v-model="formProduct.commandTemplate"
+                        :label="formProduct.productType === 'COMMAND' ? '发货指令模板 (Command Template) *' : '回收检测指令模板 (Recycle Command Template) *'"
+                        placeholder="例如：give %player% minecraft:diamond %amount%  或  clear %player% minecraft:diamond %amount%"
                         variant="outlined"
-                        density="compact"
+                        density="comfortable"
+                        rounded="lg"
+                        color="success"
+                        rows="2"
+                        class="mb-3 font-mono text-caption font-weight-bold"
+                        :rules="[v => !!v || '请输入对应的发货或回收指令模板']"
+                      ></v-textarea>
+                      <p class="text-xxs text-grey mt-n2 mb-3">支持占位符: %player% (玩家名), %amount% (发货/回收数量)</p>
+                    </div>
+                  </v-expand-transition>
+
+                  <!-- GIVE_ITEM / GIVE_CUSTOM_ITEM / RECYCLE_ITEM / RECYCLE_CUSTOM_ITEM parameters -->
+                  <v-expand-transition>
+                    <div v-if="['GIVE_ITEM', 'GIVE_CUSTOM_ITEM', 'RECYCLE_ITEM', 'RECYCLE_CUSTOM_ITEM'].includes(formProduct.productType)">
+                      <v-text-field
+                        v-model="formProduct.itemMaterial"
+                        label="原版/自定义物品材质 ID (minecraft:material) *"
+                        placeholder="例如：minecraft:diamond_sword, minecraft:oak_log"
+                        variant="outlined"
+                        density="comfortable"
+                        rounded="lg"
+                        color="success"
+                        class="mb-3 font-mono font-weight-bold"
+                        :rules="[v => !!v || '请输入物品材质 ID']"
+                      ></v-text-field>
+                    </div>
+                  </v-expand-transition>
+
+                  <!-- GROUP_BUY_VOUCHER banner -->
+                  <v-expand-transition>
+                    <div v-if="formProduct.productType === 'GROUP_BUY_VOUCHER'">
+                      <v-alert
+                        type="info"
+                        variant="tonal"
+                        color="success"
+                        class="rounded-xl mb-4 text-caption font-weight-bold"
+                        icon="mdi-shield-check"
+                      >
+                        【团购券码交付】无额外商品特权发货参数。系统将自动批量生成高保真防伪兑换凭证码（GB-XXXX），并由管理员在 cashier 面板核销后执行线下交付。
+                      </v-alert>
+                    </div>
+                  </v-expand-transition>
+
+                  <!-- POTION_EFFECT type parameters -->
+                  <v-expand-transition>
+                    <div v-if="formProduct.productType === 'POTION_EFFECT'">
+                      <!-- Visual Grid checkable chips selector -->
+                      <div class="mb-3">
+                        <p class="text-caption font-weight-black text-grey-darken-3 mb-2">常用药水效果快捷选择（点击可直接填充效果名称）：</p>
+                        <div class="d-flex flex-wrap ga-2 mb-3">
+                          <v-chip
+                            v-for="eff in commonEffects"
+                            :key="eff.value"
+                            :color="formProduct.effectType === eff.value ? 'purple' : 'default'"
+                            variant="flat"
+                            class="cursor-pointer font-weight-bold text-caption rounded-lg"
+                            @click="formProduct.effectType = eff.value"
+                          >
+                            <v-icon start size="14">{{ formProduct.effectType === eff.value ? 'mdi-check-circle' : 'mdi-circle-outline' }}</v-icon>
+                            {{ eff.title }}
+                          </v-chip>
+                        </div>
+                      </div>
+
+                      <v-row dense>
+                        <v-col cols="12" sm="6">
+                          <v-text-field
+                            v-model="formProduct.effectType"
+                            label="药水效果类别 (effectType) *"
+                            placeholder="例如：minecraft:speed、minecraft:strength"
+                            variant="outlined"
+                            density="comfortable"
+                            rounded="lg"
+                            color="success"
+                            class="mb-3 font-mono font-weight-bold"
+                            :rules="[v => !!v || '请输入药水效果标识']"
+                          ></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                          <v-text-field
+                            v-model.number="formProduct.effectSeconds"
+                            type="number"
+                            label="生效持续时长 (秒) *"
+                            placeholder="300"
+                            variant="outlined"
+                            density="comfortable"
+                            rounded="lg"
+                            color="success"
+                            class="mb-3 font-weight-bold"
+                            :rules="[v => v !== null && v !== undefined && v > 0 || '请输入持续时长']"
+                          ></v-text-field>
+                        </v-col>
+                        <v-col cols="6" sm="3">
+                          <v-select
+                            v-model.number="formProduct.effectAmplifier"
+                            :items="potionLevelOptions"
+                            label="药水等级 *"
+                            variant="outlined"
+                            density="comfortable"
+                            rounded="lg"
+                            color="success"
+                            class="mb-3 font-weight-bold"
+                          ></v-select>
+                        </v-col>
+                      </v-row>
+                    </div>
+                  </v-expand-transition>
+
+                  <!-- 1.3 数量库存限制 (Quantity / Stock) -->
+                  <h4 class="text-caption font-weight-black text-success mb-3 mt-4 d-flex align-center">
+                    <v-icon start size="16">mdi-cube-outline</v-icon>
+                    3. 商品库存限制与数量 (Quantity & Stock) *必填
+                  </h4>
+                  
+                  <div class="mb-2">
+                    <p class="text-caption text-grey-darken-3 font-weight-bold mb-2">库存供应模式选择：</p>
+                    <v-btn-toggle
+                      v-model="stockType"
+                      mandatory
+                      color="success"
+                      variant="outlined"
+                      divided
+                      class="rounded-xl mb-3 d-flex w-100 bg-white"
+                      style="height: 44px;"
+                    >
+                      <v-btn value="unlimited" class="flex-grow-1 font-weight-black text-caption">
+                        <v-icon start>mdi-infinity</v-icon>
+                        无限供应 (Unlimited Stock)
+                      </v-btn>
+                      <v-btn value="finite" class="flex-grow-1 font-weight-black text-caption">
+                        <v-icon start>mdi-numeric</v-icon>
+                        有限库存 (Finite Stock)
+                      </v-btn>
+                    </v-btn-toggle>
+                  </div>
+
+                  <v-expand-transition>
+                    <div v-if="stockType === 'finite'">
+                      <v-text-field
+                        v-model.number="formProduct.itemAmount"
+                        type="number"
+                        label="商品数量 (Finite itemAmount) *"
+                        placeholder="请输入具体可供购买的商品总量"
+                        variant="outlined"
+                        density="comfortable"
+                        rounded="lg"
+                        color="success"
+                        class="mb-3 font-weight-bold"
+                        :rules="stockType === 'finite' ? [v => !!v && v > 0 || '有限库存供应下商品数量必须大于 0'] : []"
+                      ></v-text-field>
+                    </div>
+                  </v-expand-transition>
+                </v-window-item>
+
+                <!-- TAB 2: OPTIONAL FIELDS (可选) -->
+                <v-window-item value="optional">
+                  <!-- 2.1 商品自定义信息 (Custom Display styling) -->
+                  <h4 class="text-caption font-weight-black text-success mb-3 d-flex align-center">
+                    <v-icon start size="16">mdi-palette-swatch-outline</v-icon>
+                    1. 前端显示与自定义信息覆盖 (Custom Display Override)
+                  </h4>
+
+                  <v-row dense class="align-center mb-3">
+                    <v-col cols="12" sm="6">
+                      <settings-switch
+                        v-model="formProduct.active"
+                        color="success"
+                        :label="formProduct.active ? '商品启用状态：启用中 (立即上架玩家可见)' : '商品启用状态：已停用 (隐藏下架状态)'"
+                        density="comfortable"
+                        hide-details
+                      ></settings-switch>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <v-text-field
+                        v-model="formProduct.displayNameOverride"
+                        label="自定义标题名称 (displayNameOverride) [可选]"
+                        placeholder="留空即默认与基础标题一致，用于定制前台个性别名"
+                        variant="outlined"
+                        density="comfortable"
                         rounded="lg"
                         color="success"
                         hide-details
-                        class="mb-2"
-                        style="width: 280px;"
-                        @update:model-value="handleIconFileSelect"
-                      ></v-file-input>
-                      <p class="text-xxs text-medium-emphasis">支持像素透明格式，建议最大 128x128px。</p>
+                        class="font-weight-bold"
+                      ></v-text-field>
+                    </v-col>
+                  </v-row>
+
+                  <!-- Custom Icon strategies under Active status -->
+                  <v-expand-transition>
+                    <div v-if="formProduct.active">
+                      <v-card variant="outlined" elevation="0" class="rounded-xl pa-4 bg-grey-lighten-5 mb-4 border border-success-light">
+                        <p class="text-caption text-grey-darken-3 font-weight-bold mb-2">商品展示图标策略：</p>
+                        <v-btn-toggle
+                          v-model="iconStrategy"
+                          mandatory
+                          color="success"
+                          variant="outlined"
+                          divided
+                          class="rounded-xl mb-3 d-flex w-100 bg-white"
+                          style="height: 40px;"
+                        >
+                          <v-btn value="material" class="flex-grow-1 font-weight-black text-caption">使用原版/其它材质图标 (Material Icon)</v-btn>
+                          <v-btn value="custom" class="flex-grow-1 font-weight-black text-caption">上传自定义图标图片 (Custom Image)</v-btn>
+                        </v-btn-toggle>
+
+                        <v-row dense class="align-center mt-2">
+                          <v-col cols="12" sm="8">
+                            <!-- Option A: Display Material Key -->
+                            <v-expand-transition>
+                              <div v-if="iconStrategy === 'material'">
+                                <v-text-field
+                                  v-model="formProduct.displayMaterial"
+                                  label="覆盖图标使用的原版材质名 (displayMaterial) [可选]"
+                                  placeholder="例如：minecraft:netherite_sword，留空即自动渲染发货材质"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  rounded="lg"
+                                  color="success"
+                                  class="font-mono font-weight-bold"
+                                  hide-details
+                                ></v-text-field>
+                              </div>
+                            </v-expand-transition>
+
+                            <!-- Option B: Custom Image Upload -->
+                            <v-expand-transition>
+                              <div v-if="iconStrategy === 'custom'" class="d-flex align-center">
+                                <v-file-input
+                                  label="选择并上传独立高像素 PNG/WEBP 图标"
+                                  accept="image/*"
+                                  variant="outlined"
+                                  density="comfortable"
+                                  rounded="lg"
+                                  color="success"
+                                  hide-details
+                                  class="mr-2 font-weight-bold"
+                                  @update:model-value="handleIconFileSelect"
+                                ></v-file-input>
+                              </div>
+                            </v-expand-transition>
+                          </v-col>
+
+                          <!-- Live icon preview -->
+                          <v-col cols="12" sm="4" class="d-flex justify-center">
+                            <v-avatar size="56" rounded="lg" color="white" class="border">
+                              <McIcon
+                                :material="iconStrategy === 'material' && formProduct.displayMaterial ? formProduct.displayMaterial : (formProduct.itemMaterial || 'minecraft:barrier')"
+                                :icon-url="iconStrategy === 'custom' ? formProduct.displayIconPath : ''"
+                                :size="38"
+                                color="success"
+                              />
+                            </v-avatar>
+                          </v-col>
+                        </v-row>
+                      </v-card>
                     </div>
-                  </div>
-                </v-card>
-              </v-fade-transition>
+                  </v-expand-transition>
+
+                  <!-- 2.2 玩家限购数量 (perUserLimit) -->
+                  <h4 class="text-caption font-weight-black text-success mb-3 mt-4 d-flex align-center">
+                    <v-icon start size="16">mdi-account-lock-outline</v-icon>
+                    2. 玩家级购买配额与限购 (Purchase Limit per User)
+                  </h4>
+                  <v-row dense>
+                    <v-col cols="12" sm="6">
+                      <v-text-field
+                        v-model.number="formProduct.perUserLimit"
+                        type="number"
+                        label="玩家终身最大允许购买配额 (perUserLimit) [可选]"
+                        placeholder="不限留空，用于配置特定VIP卡或福利包的全服限购"
+                        variant="outlined"
+                        density="comfortable"
+                        rounded="lg"
+                        color="success"
+                        class="mb-3 font-weight-bold"
+                      ></v-text-field>
+                    </v-col>
+                    <v-col cols="12" sm="6">
+                      <v-text-field
+                        v-model="formProduct.remark"
+                        label="商品展示备注 remark [可选]"
+                        placeholder="简短的活动提示或限制说明备注..."
+                        variant="outlined"
+                        density="comfortable"
+                        rounded="lg"
+                        color="success"
+                        class="mb-3 font-weight-bold"
+                      ></v-text-field>
+                    </v-col>
+                  </v-row>
+
+                  <!-- 2.3 动态价格波动策略 (Dynamic Pricing) -->
+                  <h4 class="text-caption font-weight-black text-success mb-3 mt-4 d-flex align-center">
+                    <v-icon start size="16">mdi-finance</v-icon>
+                    3. 经济学动态波动价格策略 (Dynamic Pricing Strategy)
+                  </h4>
+
+                  <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 bg-grey-lighten-5 mb-4 border-warning-dashed">
+                    <div class="d-flex align-center justify-space-between flex-wrap mb-3">
+                      <div class="d-flex align-center">
+                        <settings-switch
+                          v-model="formProduct.dynamicPricingEnabled"
+                          color="warning"
+                          label="启用基于供需关系的热度波动计价"
+                          hide-details
+                          density="comfortable"
+                          class="mr-4 text-warning"
+                        ></settings-switch>
+                        <span class="text-caption text-medium-emphasis">根据全服物品购买/回收热度计算交易价，控制通货膨胀。</span>
+                      </div>
+                      <v-chip v-if="formProduct.dynamicPricingEnabled" size="x-small" color="warning" class="font-weight-black">ACTIVE</v-chip>
+                    </div>
+
+                    <v-expand-transition>
+                      <div v-if="formProduct.dynamicPricingEnabled">
+                        <v-divider class="my-3"></v-divider>
+                        
+                        <!-- 动态价格基础参数 -->
+                        <p class="text-caption text-warning font-weight-black mb-2">动态价格 - 基础参数配置：</p>
+                        <v-row dense>
+                          <v-col cols="12" sm="4">
+                            <v-select
+                              v-model="formProduct.dynamicAlgorithm"
+                              :items="pricingAlgorithms"
+                              item-title="title"
+                              item-value="value"
+                              label="动态波动计算模型 *"
+                              variant="outlined"
+                              density="comfortable"
+                              rounded="lg"
+                              color="warning"
+                              class="mb-3 font-weight-bold"
+                              :rules="formProduct.dynamicPricingEnabled ? [v => !!v || '请选择一个经济波动模型'] : []"
+                            ></v-select>
+                          </v-col>
+                          <v-col cols="12" sm="4">
+                            <v-text-field
+                              v-model.number="formProduct.dynamicBasePrice"
+                              type="number"
+                              label="核心基准参考价 (Base Price) *"
+                              placeholder="默认与售价一致"
+                              variant="outlined"
+                              density="comfortable"
+                              rounded="lg"
+                              color="warning"
+                              class="mb-3 font-weight-bold"
+                              :rules="formProduct.dynamicPricingEnabled ? [v => v !== null && v !== undefined && v >= 0 || '请输入基准核心定价'] : []"
+                            ></v-text-field>
+                          </v-col>
+                          <v-col cols="12" sm="4">
+                            <v-text-field
+                              v-model.number="formProduct.dynamicPriceStep"
+                              type="number"
+                              label="波动调整步长价格比例 (Price Step) *"
+                              placeholder="每次波动的金额比率，默认1"
+                              variant="outlined"
+                              density="comfortable"
+                              rounded="lg"
+                              color="warning"
+                              class="mb-3 font-weight-bold"
+                              :rules="formProduct.dynamicPricingEnabled ? [v => v !== null && v !== undefined && v > 0 || '步长不可为0或负数'] : []"
+                            ></v-text-field>
+                          </v-col>
+                        </v-row>
+
+                        <v-row dense>
+                          <v-col cols="12" sm="6">
+                            <v-text-field
+                              v-model.number="formProduct.dynamicFloorPrice"
+                              type="number"
+                              label="保底地板限价 (Floor Price) [可选]"
+                              placeholder="达到此底价后不再继续降价，防止无限抛售贬值"
+                              variant="outlined"
+                              density="comfortable"
+                              rounded="lg"
+                              color="warning"
+                              class="mb-3 font-weight-bold"
+                            ></v-text-field>
+                          </v-col>
+                          <v-col cols="12" sm="6">
+                            <v-text-field
+                              v-model.number="formProduct.dynamicCapPrice"
+                              type="number"
+                              label="防炒作最高封顶售价 (Cap Price) [可选]"
+                              placeholder="限价最高门槛，防止垄断爆炒通胀"
+                              variant="outlined"
+                              density="comfortable"
+                              rounded="lg"
+                              color="warning"
+                              class="mb-3 font-weight-bold"
+                            ></v-text-field>
+                          </v-col>
+                        </v-row>
+
+                        <!-- 动态价格高级算法参数 (Visual Sliders & Inputs) -->
+                        <v-divider class="my-3"></v-divider>
+                        <p class="text-caption text-warning font-weight-black mb-3">动态价格 - 高级波动算法变量微调（实时同步双向 JSON）：</p>
+
+                        <!-- LINEAR_DEMAND Advanced variables -->
+                        <div v-if="formProduct.dynamicAlgorithm === 'LINEAR_DEMAND'" class="pa-3 bg-white border rounded-xl mb-3">
+                          <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
+                            <v-icon color="warning" class="mr-2">mdi-chart-line</v-icon>
+                            线性需求参数：每次交易后，价格随供需斜率以 k 进行线性递增或递减波动。
+                          </p>
+                          <div class="d-flex align-center mt-2 px-1">
+                            <span class="text-caption mr-3" style="width: 80px;">线性斜率 (k):</span>
+                            <v-slider
+                              v-model="linearSlope"
+                              :min="0.01"
+                              :max="5.0"
+                              step="0.01"
+                              color="warning"
+                              hide-details
+                              class="flex-grow-1 mr-4"
+                            ></v-slider>
+                            <v-text-field
+                              v-model.number="linearSlope"
+                              type="number"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                              style="max-width: 80px;"
+                            ></v-text-field>
+                          </div>
+                        </div>
+
+                        <!-- MARGINAL_DECAY Advanced variables -->
+                        <div v-if="formProduct.dynamicAlgorithm === 'MARGINAL_DECAY'" class="pa-3 bg-white border rounded-xl mb-3">
+                          <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
+                            <v-icon color="warning" class="mr-2">mdi-trending-down</v-icon>
+                            边际递减参数：价格波动受振幅与抑制系数控制，热度增长时呈现边际效用递减效应。
+                          </p>
+                          <div class="d-flex align-center mt-3 px-1">
+                            <span class="text-caption mr-3" style="width: 100px;">边际振幅:</span>
+                            <v-slider
+                              v-model="marginalAmplitude"
+                              :min="1"
+                              :max="500"
+                              step="1"
+                              color="warning"
+                              hide-details
+                              class="flex-grow-1 mr-4"
+                            ></v-slider>
+                            <v-text-field
+                              v-model.number="marginalAmplitude"
+                              type="number"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                              style="max-width: 80px;"
+                            ></v-text-field>
+                          </div>
+                          <div class="d-flex align-center mt-3 px-1">
+                            <span class="text-caption mr-3" style="width: 100px;">抑制系数:</span>
+                            <v-slider
+                              v-model="marginalDecay"
+                              :min="0.001"
+                              :max="0.5"
+                              step="0.001"
+                              color="warning"
+                              hide-details
+                              class="flex-grow-1 mr-4"
+                            ></v-slider>
+                            <v-text-field
+                              v-model.number="marginalDecay"
+                              type="number"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                              style="max-width: 80px;"
+                            ></v-text-field>
+                          </div>
+                        </div>
+
+                        <!-- LOGARITHMIC_SMOOTH Advanced variables -->
+                        <div v-if="formProduct.dynamicAlgorithm === 'LOGARITHMIC_SMOOTH'" class="pa-3 bg-white border rounded-xl mb-3">
+                          <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
+                            <v-icon color="warning" class="mr-2">mdi-calculator</v-icon>
+                            对数平滑参数：通过自然对数尺度压缩巨量销量冲击，避免大单交易让售价产生瞬间暴涨暴跌。
+                          </p>
+                          <div class="d-flex align-center mt-2 px-1">
+                            <span class="text-caption mr-3" style="width: 90px;">对数平滑系数:</span>
+                            <v-slider
+                              v-model="logarithmicAlpha"
+                              :min="0.1"
+                              :max="10.0"
+                              step="0.1"
+                              color="warning"
+                              hide-details
+                              class="flex-grow-1 mr-4"
+                            ></v-slider>
+                            <v-text-field
+                              v-model.number="logarithmicAlpha"
+                              type="number"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                              style="max-width: 80px;"
+                            ></v-text-field>
+                          </div>
+                        </div>
+
+                        <!-- EXPONENTIAL_DEFENSE Advanced variables -->
+                        <div v-if="formProduct.dynamicAlgorithm === 'EXPONENTIAL_DEFENSE'" class="pa-3 bg-white border rounded-xl mb-3">
+                          <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
+                            <v-icon color="warning" class="mr-2">mdi-shield-alert-outline</v-icon>
+                            指数防御参数：高敏感指数防护策略，在遭受批量投机刷取或疯狂倾销时，计算价格自动进行指数级极速偏离保护。
+                          </p>
+                          <div class="d-flex align-center mt-2 px-1">
+                            <span class="text-caption mr-3" style="width: 90px;">指数倍率:</span>
+                            <v-slider
+                              v-model="exponentialMultiplier"
+                              :min="1.01"
+                              :max="2.0"
+                              step="0.01"
+                              color="warning"
+                              hide-details
+                              class="flex-grow-1 mr-4"
+                            ></v-slider>
+                            <v-text-field
+                              v-model.number="exponentialMultiplier"
+                              type="number"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                              style="max-width: 80px;"
+                            ></v-text-field>
+                          </div>
+                        </div>
+
+                        <!-- THRESHOLD_STEP Advanced variables -->
+                        <div v-if="formProduct.dynamicAlgorithm === 'THRESHOLD_STEP'" class="pa-3 bg-white border rounded-xl mb-3">
+                          <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
+                            <v-icon color="warning" class="mr-2">mdi-stairs</v-icon>
+                            阈值分段参数：基于设定阈值门槛的双段斜率公式。当需求累积跨过临界线时，将由低灵敏度偏离斜率自动跃升为高保护斜率。
+                          </p>
+                          <v-row dense class="align-center mt-3">
+                            <v-col cols="4">
+                              <v-text-field
+                                v-model.number="thresholdVal"
+                                type="number"
+                                label="跃变起跳阈值 *"
+                                density="comfortable"
+                                variant="outlined"
+                                hide-details
+                                class="mb-2 font-weight-bold"
+                              ></v-text-field>
+                            </v-col>
+                            <v-col cols="4">
+                              <v-text-field
+                                v-model.number="thresholdSlope1"
+                                type="number"
+                                label="阈值前段斜率 *"
+                                density="comfortable"
+                                variant="outlined"
+                                hide-details
+                                class="mb-2 font-weight-bold"
+                              ></v-text-field>
+                            </v-col>
+                            <v-col cols="4">
+                              <v-text-field
+                                v-model.number="thresholdSlope2"
+                                type="number"
+                                label="阈值后段斜率 *"
+                                density="comfortable"
+                                variant="outlined"
+                                hide-details
+                                class="mb-2 font-weight-bold"
+                              ></v-text-field>
+                            </v-col>
+                          </v-row>
+                        </div>
+
+                        <!-- ELASTICITY_MODEL Advanced variables -->
+                        <div v-if="formProduct.dynamicAlgorithm === 'ELASTICITY_MODEL'" class="pa-3 bg-white border rounded-xl mb-3">
+                          <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
+                            <v-icon color="warning" class="mr-2">mdi-sine-wave</v-icon>
+                            弹性模型参数：模拟现实市场需求价格弹性算法。考虑底线刚性需求平滑因子与参考期望热度，动态反馈价格波动。
+                          </p>
+                          <div class="d-flex align-center mt-3 px-1">
+                            <span class="text-caption mr-3" style="width: 100px;">弹性指数:</span>
+                            <v-slider
+                              v-model="elasticityVal"
+                              :min="0.1"
+                              :max="5.0"
+                              step="0.1"
+                              color="warning"
+                              hide-details
+                              class="flex-grow-1 mr-4"
+                            ></v-slider>
+                            <v-text-field
+                              v-model.number="elasticityVal"
+                              type="number"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                              style="max-width: 80px;"
+                            ></v-text-field>
+                          </div>
+                          <div class="d-flex align-center mt-3 px-1">
+                            <span class="text-caption mr-3" style="width: 100px;">刚性平滑项:</span>
+                            <v-slider
+                              v-model="elasticityEpsilon"
+                              :min="0.01"
+                              :max="1.0"
+                              step="0.01"
+                              color="warning"
+                              hide-details
+                              class="flex-grow-1 mr-4"
+                            ></v-slider>
+                            <v-text-field
+                              v-model.number="elasticityEpsilon"
+                              type="number"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                              style="max-width: 80px;"
+                            ></v-text-field>
+                          </div>
+                          <div class="d-flex align-center mt-3 px-1">
+                            <v-text-field
+                              v-model.number="elasticityBaseDemand"
+                              type="number"
+                              label="模型基准参考热度需求"
+                              density="comfortable"
+                              variant="outlined"
+                              hide-details
+                              class="w-100 font-weight-bold"
+                            ></v-text-field>
+                          </div>
+                        </div>
+
+                        <!-- PANIC_BUYING Advanced variables -->
+                        <div v-if="formProduct.dynamicAlgorithm === 'PANIC_BUYING'" class="pa-3 bg-white border rounded-xl mb-3">
+                          <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
+                            <v-icon color="warning" class="mr-2">mdi-lightning-bolt-outline</v-icon>
+                            恐慌抢购参数：当销量速率爆发越过“恐慌警戒点”时，在原有线性斜率基础之上级联触发非线性的二次恐慌加成振幅。
+                          </p>
+                          <v-row dense class="align-center mt-2 mb-2">
+                            <v-col cols="12" sm="4">
+                              <v-text-field
+                                v-model.number="panicThreshold"
+                                type="number"
+                                label="触发恐慌警戒阈值 *"
+                                density="comfortable"
+                                variant="outlined"
+                                hide-details
+                                class="font-weight-bold"
+                              ></v-text-field>
+                            </v-col>
+                            <v-col cols="12" sm="4" class="d-flex align-center">
+                              <span class="text-xxs mr-2">核心斜率 (k):</span>
+                              <v-slider
+                                v-model="panicK"
+                                :min="0.01"
+                                :max="2.0"
+                                step="0.01"
+                                color="warning"
+                                hide-details
+                                class="flex-grow-1 mr-2"
+                              ></v-slider>
+                              <v-text-field
+                                v-model.number="panicK"
+                                type="number"
+                                density="compact"
+                                variant="outlined"
+                                hide-details
+                                style="max-width: 65px;"
+                              ></v-text-field>
+                            </v-col>
+                            <v-col cols="12" sm="4" class="d-flex align-center">
+                              <span class="text-xxs mr-2">二次振幅:</span>
+                              <v-slider
+                                v-model="panicMultiplier"
+                                :min="0.01"
+                                :max="5.0"
+                                step="0.01"
+                                color="warning"
+                                hide-details
+                                class="flex-grow-1 mr-2"
+                              ></v-slider>
+                              <v-text-field
+                                v-model.number="panicMultiplier"
+                                type="number"
+                                density="compact"
+                                variant="outlined"
+                                hide-details
+                                style="max-width: 65px;"
+                              ></v-text-field>
+                            </v-col>
+                          </v-row>
+                        </div>
+
+                        <!-- collapsible expert panel for Raw JSON Params -->
+                        <v-expansion-panels class="mt-3">
+                          <v-expansion-panel class="bg-transparent border rounded-lg">
+                            <v-expansion-panel-title class="py-1 text-xxs font-weight-bold text-grey">
+                              专家级参数：查看并手动重写最终原始 JSON
+                            </v-expansion-panel-title>
+                            <v-expansion-panel-text>
+                              <v-textarea
+                                v-model="rawPricingParams"
+                                placeholder='例如：{"k": 0.2, "amplitude": 100}'
+                                variant="outlined"
+                                density="compact"
+                                rounded="lg"
+                                color="warning"
+                                rows="3"
+                                class="font-mono text-caption"
+                                hide-details
+                              ></v-textarea>
+                            </v-expansion-panel-text>
+                          </v-expansion-panel>
+                        </v-expansion-panels>
+                      </div>
+                    </v-expand-transition>
+                  </v-card>
+                </v-window-item>
+
+              </v-window>
             </v-form>
           </v-card-text>
 
           <v-divider class="my-4"></v-divider>
 
-          <div class="d-flex justify-end">
-            <v-btn
-              color="secondary"
-              variant="tonal"
-              class="rounded-lg font-weight-bold text-caption mr-2"
-              @click="upsertDialog = false"
-            >
-              取消
-            </v-btn>
-            <v-btn
-              color="success"
-              variant="flat"
-              class="rounded-lg font-weight-black text-caption px-4"
-              :loading="upsertLoading"
-              @click="handleSaveProduct"
-            >
-              保存商品配置
-            </v-btn>
+          <!-- Dialogue Actions -->
+          <div class="d-flex justify-space-between align-center">
+            <span class="text-xxs text-grey-darken-1 font-weight-bold">
+              * 双栏排布设计已根据官方商城新模板归类
+            </span>
+            <div class="d-flex">
+              <v-btn
+                color="secondary"
+                variant="tonal"
+                class="rounded-lg font-weight-bold text-caption mr-2"
+                @click="upsertDialog = false"
+              >
+                取消
+              </v-btn>
+              <v-btn
+                color="success"
+                variant="flat"
+                class="rounded-lg font-weight-black text-caption px-4"
+                :loading="upsertLoading"
+                @click="handleSaveProduct"
+              >
+                保存商品配置
+              </v-btn>
+            </div>
           </div>
         </v-card>
       </v-dialog>
@@ -820,7 +1274,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import AdminGate from '@/components/AdminGate.vue'
 import McIcon from '@/components/McIcon.vue'
@@ -1127,10 +1581,159 @@ const pricingAlgorithms = computed(() => [
   { title: '对数平滑模型 (LOGARITHMIC_SMOOTH)', value: 'LOGARITHMIC_SMOOTH' },
   { title: '指数防御模型 (EXPONENTIAL_DEFENSE)', value: 'EXPONENTIAL_DEFENSE' },
   { title: '阈值阶梯算法 (THRESHOLD_STEP)', value: 'THRESHOLD_STEP' },
-  { title: '需求价格弹性模型 (ELASTICITY_MODEL)', value: 'ELASTICITY_MODEL' }
+  { title: '需求价格弹性模型 (ELASTICITY_MODEL)', value: 'ELASTICITY_MODEL' },
+  { title: '恐慌抢购模型 (PANIC_BUYING)', value: 'PANIC_BUYING' }
 ])
 
+// Form Tabs & Extra UI state
+const formTab = ref<'required' | 'optional'>('required')
+const stockType = ref<'unlimited' | 'finite'>('unlimited')
+const iconStrategy = ref<'material' | 'custom'>('material')
+
+const potionLevelOptions = [
+  { title: 'I 级 (0)', value: 0 },
+  { title: 'II 级 (1)', value: 1 },
+  { title: 'III 级 (2)', value: 2 },
+  { title: 'IV 级 (3)', value: 3 },
+  { title: 'V 级 (4)', value: 4 }
+]
+
+const commonEffects = [
+  { title: '速度 (Speed)', value: 'minecraft:speed' },
+  { title: '急迫 (Haste)', value: 'minecraft:haste' },
+  { title: '力量 (Strength)', value: 'minecraft:strength' },
+  { title: '生命恢复 (Regeneration)', value: 'minecraft:regeneration' },
+  { title: '抗性提升 (Resistance)', value: 'minecraft:resistance' },
+  { title: '防火 (Fire Resistance)', value: 'minecraft:fire_resistance' },
+  { title: '水下呼吸 (Water Breathing)', value: 'minecraft:water_breathing' },
+  { title: '夜视 (Night Vision)', value: 'minecraft:night_vision' },
+  { title: '隐形 (Invisibility)', value: 'minecraft:invisibility' }
+]
+
+// Dynamic Pricing Slider variables
+const linearSlope = ref(0.2)
+const marginalAmplitude = ref(100)
+const marginalDecay = ref(0.01)
+const logarithmicAlpha = ref(1.0)
+const exponentialMultiplier = ref(1.1)
+const thresholdVal = ref(100)
+const thresholdSlope1 = ref(0.1)
+const thresholdSlope2 = ref(0.5)
+const elasticityVal = ref(1.0)
+const elasticityEpsilon = ref(0.1)
+const elasticityBaseDemand = ref(100)
+const panicThreshold = ref(100)
+const panicK = ref(0.2)
+const panicMultiplier = ref(1.5)
+
+let isSyncing = false
+
+const syncVisualToJSON = () => {
+  if (isSyncing) return
+  isSyncing = true
+  try {
+    const alg = formProduct.value.dynamicAlgorithm
+    let obj: any = {}
+    if (alg === 'LINEAR_DEMAND') {
+      obj = { k: Number(linearSlope.value) }
+    } else if (alg === 'MARGINAL_DECAY') {
+      obj = { amplitude: Number(marginalAmplitude.value), decay: Number(marginalDecay.value) }
+    } else if (alg === 'LOGARITHMIC_SMOOTH') {
+      obj = { alpha: Number(logarithmicAlpha.value) }
+    } else if (alg === 'EXPONENTIAL_DEFENSE') {
+      obj = { multiplier: Number(exponentialMultiplier.value) }
+    } else if (alg === 'THRESHOLD_STEP') {
+      obj = { threshold: Number(thresholdVal.value), slope1: Number(thresholdSlope1.value), slope2: Number(thresholdSlope2.value) }
+    } else if (alg === 'ELASTICITY_MODEL') {
+      obj = { elasticity: Number(elasticityVal.value), epsilon: Number(elasticityEpsilon.value), baseDemand: Number(elasticityBaseDemand.value) }
+    } else if (alg === 'PANIC_BUYING') {
+      obj = { panicThreshold: Number(panicThreshold.value), k: Number(panicK.value), panicMultiplier: Number(panicMultiplier.value) }
+    }
+    rawPricingParams.value = JSON.stringify(obj, null, 2)
+  } catch (e) {
+    console.error(e)
+  } finally {
+    isSyncing = false
+  }
+}
+
+const syncJSONToVisual = (jsonStr: string) => {
+  if (isSyncing) return
+  isSyncing = true
+  try {
+    const parsed = JSON.parse(jsonStr)
+    if (parsed && typeof parsed === 'object') {
+      const alg = formProduct.value.dynamicAlgorithm
+      if (alg === 'LINEAR_DEMAND') {
+        if (typeof parsed.k === 'number') linearSlope.value = parsed.k
+      } else if (alg === 'MARGINAL_DECAY') {
+        if (typeof parsed.amplitude === 'number') marginalAmplitude.value = parsed.amplitude
+        if (typeof parsed.decay === 'number') marginalDecay.value = parsed.decay
+      } else if (alg === 'LOGARITHMIC_SMOOTH') {
+        if (typeof parsed.alpha === 'number') logarithmicAlpha.value = parsed.alpha
+      } else if (alg === 'EXPONENTIAL_DEFENSE') {
+        if (typeof parsed.multiplier === 'number') exponentialMultiplier.value = parsed.multiplier
+      } else if (alg === 'THRESHOLD_STEP') {
+        if (typeof parsed.threshold === 'number') thresholdVal.value = parsed.threshold
+        if (typeof parsed.slope1 === 'number') thresholdSlope1.value = parsed.slope1
+        if (typeof parsed.slope2 === 'number') thresholdSlope2.value = parsed.slope2
+      } else if (alg === 'ELASTICITY_MODEL') {
+        if (typeof parsed.elasticity === 'number') elasticityVal.value = parsed.elasticity
+        if (typeof parsed.epsilon === 'number') elasticityEpsilon.value = parsed.epsilon
+        if (typeof parsed.baseDemand === 'number') elasticityBaseDemand.value = parsed.baseDemand
+      } else if (alg === 'PANIC_BUYING') {
+        if (typeof parsed.panicThreshold === 'number') panicThreshold.value = parsed.panicThreshold
+        if (typeof parsed.k === 'number') panicK.value = parsed.k
+        if (typeof parsed.panicMultiplier === 'number') panicMultiplier.value = parsed.panicMultiplier
+      }
+    }
+  } catch (e) {
+    // User typing incomplete JSON
+  } finally {
+    isSyncing = false
+  }
+}
+
+watch(
+  [
+    linearSlope,
+    marginalAmplitude,
+    marginalDecay,
+    logarithmicAlpha,
+    exponentialMultiplier,
+    thresholdVal,
+    thresholdSlope1,
+    thresholdSlope2,
+    elasticityVal,
+    elasticityEpsilon,
+    elasticityBaseDemand,
+    panicThreshold,
+    panicK,
+    panicMultiplier
+  ],
+  () => {
+    syncVisualToJSON()
+  }
+)
+
+watch(
+  () => formProduct.value?.dynamicAlgorithm,
+  () => {
+    syncVisualToJSON()
+  }
+)
+
+watch(
+  () => rawPricingParams.value,
+  (newVal) => {
+    if (newVal) {
+      syncJSONToVisual(newVal)
+    }
+  }
+)
+
 const handleOpenUpsertDialog = (item: any | null) => {
+  formTab.value = 'required'
   if (item) {
     editMode.value = true
     formProduct.value = {
@@ -1143,7 +1746,20 @@ const handleOpenUpsertDialog = (item: any | null) => {
       dynamicPriceStep: item.dynamicPriceStep === null || item.dynamicPriceStep === undefined ? 1 : item.dynamicPriceStep,
       dynamicAlgorithm: item.dynamicAlgorithm || 'LINEAR_DEMAND'
     }
-    rawPricingParams.value = item.dynamicParamsJson ? String(item.dynamicParamsJson) : ''
+    
+    // Supply stock strategy and icon strategy initialization
+    stockType.value = (item.itemAmount && Number(item.itemAmount) > 0) ? 'finite' : 'unlimited'
+    iconStrategy.value = item.displayIconPath ? 'custom' : 'material'
+    
+    if (item.dynamicParamsJson) {
+      rawPricingParams.value = String(item.dynamicParamsJson)
+      setTimeout(() => {
+        syncJSONToVisual(String(item.dynamicParamsJson))
+      }, 50)
+    } else {
+      rawPricingParams.value = ''
+      syncVisualToJSON()
+    }
   } else {
     editMode.value = false
     formProduct.value = {
@@ -1173,7 +1789,10 @@ const handleOpenUpsertDialog = (item: any | null) => {
       displayIconPath: '',
       iconUrl: ''
     }
+    stockType.value = 'unlimited'
+    iconStrategy.value = 'material'
     rawPricingParams.value = ''
+    syncVisualToJSON()
   }
 
   upsertDialog.value = true
@@ -1204,18 +1823,19 @@ const handleSaveProduct = async () => {
     const payload = {
       sku: formProduct.value.sku.trim(),
       title: formProduct.value.title.trim(),
-      remark: formProduct.value.remark.trim() || formProduct.value.title.trim(),
+      remark: formProduct.value.remark?.trim() || formProduct.value.title.trim(),
       price: Number(formProduct.value.price),
       currency: formProduct.value.currency,
       productType: formProduct.value.productType,
-      commandTemplate: formProduct.value.commandTemplate.trim() || undefined,
-      effectType: formProduct.value.effectType.trim() || undefined,
+      commandTemplate: formProduct.value.commandTemplate?.trim() || undefined,
+      effectType: formProduct.value.effectType?.trim() || undefined,
       effectSeconds: formProduct.value.effectSeconds ? Number(formProduct.value.effectSeconds) : undefined,
-      effectAmplifier: formProduct.value.effectAmplifier ? Number(formProduct.value.effectAmplifier) : undefined,
-      itemMaterial: formProduct.value.itemMaterial.trim() || undefined,
-      displayMaterial: formProduct.value.displayMaterial.trim() || undefined,
-      displayNameOverride: formProduct.value.displayNameOverride.trim() || undefined,
-      itemAmount: formProduct.value.itemAmount === '' ? null : Number(formProduct.value.itemAmount),
+      effectAmplifier: formProduct.value.effectAmplifier !== undefined ? Number(formProduct.value.effectAmplifier) : undefined,
+      itemMaterial: formProduct.value.itemMaterial?.trim() || undefined,
+      displayMaterial: (iconStrategy.value === 'material' && formProduct.value.displayMaterial) ? formProduct.value.displayMaterial.trim() : undefined,
+      displayIconPath: iconStrategy.value === 'custom' ? formProduct.value.displayIconPath : '',
+      displayNameOverride: formProduct.value.displayNameOverride?.trim() || undefined,
+      itemAmount: stockType.value === 'finite' ? (formProduct.value.itemAmount === '' ? null : Number(formProduct.value.itemAmount)) : null,
       perUserLimit: formProduct.value.perUserLimit === '' ? null : Number(formProduct.value.perUserLimit),
       active: Boolean(formProduct.value.active),
       dynamicPricingEnabled: Boolean(formProduct.value.dynamicPricingEnabled),
