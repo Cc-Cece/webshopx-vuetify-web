@@ -13,42 +13,66 @@
                 :title="$t('admin.uiText.tabLabelEconomy')"
                 class="py-3 font-weight-bold"
                 @click="showDetail = true"
-              ></v-list-item>
+              >
+                <template #append v-if="isModuleDirty('economy')">
+                  <v-badge dot color="warning" inline class="mr-2"></v-badge>
+                </template>
+              </v-list-item>
               <v-list-item
                 value="products"
                 prepend-icon="mdi-basket-outline"
                 :title="$t('admin.uiText.tabLabelProducts')"
                 class="py-3 font-weight-bold"
                 @click="showDetail = true"
-              ></v-list-item>
+              >
+                <template #append v-if="isModuleDirty('products')">
+                  <v-badge dot color="warning" inline class="mr-2"></v-badge>
+                </template>
+              </v-list-item>
               <v-list-item
                 value="permissions"
                 prepend-icon="mdi-shield-account-outline"
                 :title="$t('admin.uiText.tabLabelMarket')"
                 class="py-3 font-weight-bold"
                 @click="showDetail = true"
-              ></v-list-item>
+              >
+                <template #append v-if="isModuleDirty('permissions')">
+                  <v-badge dot color="warning" inline class="mr-2"></v-badge>
+                </template>
+              </v-list-item>
               <v-list-item
                 value="frontend"
                 prepend-icon="mdi-monitor-dashboard"
                 :title="$t('admin.uiText.tabLabelFrontend')"
                 class="py-3 font-weight-bold"
                 @click="showDetail = true"
-              ></v-list-item>
+              >
+                <template #append v-if="isModuleDirty('frontend')">
+                  <v-badge dot color="warning" inline class="mr-2"></v-badge>
+                </template>
+              </v-list-item>
               <v-list-item
                 value="backend"
                 prepend-icon="mdi-server"
                 :title="$t('admin.uiText.tabLabelBackend')"
                 class="py-3 font-weight-bold"
                 @click="showDetail = true"
-              ></v-list-item>
+              >
+                <template #append v-if="isModuleDirty('backend')">
+                  <v-badge dot color="warning" inline class="mr-2"></v-badge>
+                </template>
+              </v-list-item>
               <v-list-item
                 value="other"
                 prepend-icon="mdi-dots-horizontal-circle-outline"
                 :title="$t('admin.uiText.tabLabelOther')"
                 class="py-3 font-weight-bold"
                 @click="showDetail = true"
-              ></v-list-item>
+              >
+                <template #append v-if="isModuleDirty('other')">
+                  <v-badge dot color="warning" inline class="mr-2"></v-badge>
+                </template>
+              </v-list-item>
             </v-list>
           </v-col>
 
@@ -1516,14 +1540,51 @@
         </v-row>
       </v-card>
 
-      <!-- 悬浮保存按钮 (FAB) -->
+      <!-- 悬浮保存警告横幅 (Sticky Glassmorphic Alert Banner) -->
       <v-slide-y-reverse-transition>
-        <div v-if="mdAndUp || showDetail" class="fab-container">
+        <div v-if="hasUnsavedChanges" class="unsaved-banner-container">
+          <v-card class="unsaved-banner d-flex align-center justify-space-between px-6 py-3 rounded-xl elevation-6 border">
+            <div class="d-flex align-center gap-3">
+              <v-icon color="warning" size="24" class="pulse-icon">mdi-alert-circle-outline</v-icon>
+              <div>
+                <div class="text-subtitle-2 font-weight-bold text-slate-800">{{ $t('admin.uiText.autoHtml.k0383') }}</div>
+                <div class="text-caption text-medium-emphasis">发现未保存的修改，请即时保存以防丢失。</div>
+              </div>
+            </div>
+            <div class="d-flex gap-2">
+              <v-btn
+                variant="outlined"
+                color="secondary"
+                rounded="lg"
+                class="text-caption font-weight-bold px-4"
+                :disabled="saving"
+                @click="discardAllChanges"
+              >
+                {{ $t('admin.uiText.manifestSourceCancelBtn') }}
+              </v-btn>
+              <v-btn
+                color="primary"
+                variant="flat"
+                rounded="lg"
+                class="text-caption font-weight-bold px-6"
+                :loading="saving"
+                @click="saveAllSettings"
+              >
+                {{ $t('admin.uiText.autoHtml.k0554') }}
+              </v-btn>
+            </div>
+          </v-card>
+        </div>
+      </v-slide-y-reverse-transition>
+
+      <!-- 悬浮保存按钮 (FAB) - 当没有未保存修改时展示 -->
+      <v-slide-y-reverse-transition>
+        <div v-if="(mdAndUp || showDetail) && !hasUnsavedChanges" class="fab-container">
           <v-btn
             color="primary"
             prepend-icon="mdi-content-save"
             size="large"
-            :class="['hover-scale', 'border', 'rounded-pill', 'font-weight-bold', 'px-6', { 'fab-pulse': hasUnsavedChanges }]"
+            :class="['hover-scale', 'border', 'rounded-pill', 'font-weight-bold', 'px-6']"
             variant="elevated"
             elevation="4"
             :loading="saving"
@@ -2549,6 +2610,93 @@ const hasUnsavedChanges = computed(() => {
   return getCurrentSettingsSnapshot() !== initialSettingsSnapshot.value
 })
 
+function isModuleDirty(moduleName: string): boolean {
+  if (!initialSettingsSnapshot.value) {
+    console.log(`[isModuleDirty] Module '${moduleName}' baseline snapshot is empty, returning false.`);
+    return false;
+  }
+  try {
+    const parsed = JSON.parse(initialSettingsSnapshot.value)
+    let dirty = false
+    let currentStr = ''
+    let baselineStr = ''
+    
+    if (moduleName === 'economy') {
+      currentStr = JSON.stringify(economySettings.value)
+      baselineStr = JSON.stringify(parsed.economy)
+      dirty = currentStr !== baselineStr
+    } else if (moduleName === 'products') {
+      const currentProducts = {
+        materialOverrides: productSettings.value.materialOverrides.map(({ iconFile, ...rest }: any) => rest),
+        tags: productSettings.value.tags
+      }
+      currentStr = JSON.stringify(currentProducts)
+      baselineStr = JSON.stringify(parsed.products)
+      dirty = currentStr !== baselineStr
+    } else if (moduleName === 'permissions') {
+      currentStr = JSON.stringify(permissionSettings.value)
+      baselineStr = JSON.stringify(parsed.permissions)
+      dirty = currentStr !== baselineStr
+    } else if (moduleName === 'frontend') {
+      const baseDirty = JSON.stringify(frontendSettings.value) !== JSON.stringify(parsed.frontend)
+      const langDirty = JSON.stringify(languageList.value) !== JSON.stringify(parsed.languages)
+      const themeDirty = JSON.stringify(themeList.value) !== JSON.stringify(parsed.themes)
+      dirty = baseDirty || langDirty || themeDirty
+      
+      console.log(`[isModuleDirty] Frontend sub-modules check:`, { baseDirty, langDirty, themeDirty })
+    } else if (moduleName === 'backend') {
+      currentStr = JSON.stringify(backendSettings.value)
+      baselineStr = JSON.stringify(parsed.backend)
+      dirty = currentStr !== baselineStr
+    } else if (moduleName === 'other') {
+      currentStr = JSON.stringify(otherSettings.value)
+      baselineStr = JSON.stringify(parsed.other)
+      dirty = currentStr !== baselineStr
+    }
+    
+    console.log(`[isModuleDirty] Module '${moduleName}' dirty check result: ${dirty}`);
+    if (dirty && currentStr && baselineStr) {
+      console.log(`[isModuleDirty] Diff details for '${moduleName}':`, {
+        current: JSON.parse(currentStr),
+        baseline: JSON.parse(baselineStr)
+      });
+    }
+    return dirty
+  } catch (e) {
+    console.error('Failed to parse settings snapshot for dirty check', e)
+  }
+  return false
+}
+
+function discardAllChanges() {
+  if (!initialSettingsSnapshot.value) return
+  try {
+    const parsed = JSON.parse(initialSettingsSnapshot.value)
+    
+    economySettings.value = JSON.parse(JSON.stringify(parsed.economy))
+    
+    productSettings.value.materialOverrides = JSON.parse(JSON.stringify(parsed.products.materialOverrides))
+    initialMaterialOverrides = JSON.parse(JSON.stringify(productSettings.value.materialOverrides))
+    
+    productSettings.value.tags = JSON.parse(JSON.stringify(parsed.products.tags))
+    
+    permissionSettings.value = JSON.parse(JSON.stringify(parsed.permissions))
+    frontendSettings.value = JSON.parse(JSON.stringify(parsed.frontend))
+    backendSettings.value = JSON.parse(JSON.stringify(parsed.backend))
+    otherSettings.value = JSON.parse(JSON.stringify(parsed.other))
+    
+    languageList.value = JSON.parse(JSON.stringify(parsed.languages))
+    initialLanguageList = JSON.parse(JSON.stringify(languageList.value))
+    
+    themeList.value = JSON.parse(JSON.stringify(parsed.themes))
+    initialThemeList = JSON.parse(JSON.stringify(themeList.value))
+    
+    snackbar.value = true
+  } catch (e) {
+    console.error('Failed to discard changes', e)
+  }
+}
+
 function handleBeforeUnload(e: BeforeUnloadEvent) {
   if (hasUnsavedChanges.value) {
     e.preventDefault()
@@ -2609,7 +2757,10 @@ async function loadAllSettings() {
       gameCoinSymbol: data.currency?.gameCoinShort ?? 'GC'
     }
 
-    productSettings.value.materialOverrides = (materialRes.data || []).map((item: any) => ({
+    const overridesArray = Array.isArray(materialRes.data)
+      ? materialRes.data
+      : (materialRes.data?.overrides || [])
+    productSettings.value.materialOverrides = overridesArray.map((item: any) => ({
       id: item.material || '',
       customName: item.customName || '',
       iconUrl: item.iconUrl || '',
@@ -2723,7 +2874,10 @@ async function loadAllSettings() {
       retentionDays: data.logging?.retentionDays ?? 14
     }
 
-    languageList.value = (localesRes.data || []).map((l: any) => ({
+    const localesArray = Array.isArray(localesRes.data)
+      ? localesRes.data
+      : (localesRes.data?.locales || [])
+    languageList.value = localesArray.map((l: any) => ({
       webEnabled: !!l.webEnabled,
       gameEnabled: !!l.gameEnabled,
       code: l.code || '',
@@ -2731,7 +2885,10 @@ async function loadAllSettings() {
     }))
     initialLanguageList = JSON.parse(JSON.stringify(languageList.value))
 
-    themeList.value = (themesRes.data || []).map((t: any) => ({
+    const themesArray = Array.isArray(themesRes.data)
+      ? themesRes.data
+      : (themesRes.data?.themes || [])
+    themeList.value = themesArray.map((t: any) => ({
       webEnabled: !!t.webEnabled,
       gameEnabled: !!t.gameEnabled,
       code: t.code || '',
@@ -2953,7 +3110,10 @@ async function processUploadedFile(file: File) {
       })
       // reload locales
       const localesRes = await adminApi.getLocales()
-      languageList.value = (localesRes.data || []).map((l: any) => ({
+      const localesArray = Array.isArray(localesRes.data)
+        ? localesRes.data
+        : (localesRes.data?.locales || [])
+      languageList.value = localesArray.map((l: any) => ({
         webEnabled: !!l.webEnabled,
         gameEnabled: !!l.gameEnabled,
         code: l.code || '',
@@ -3025,7 +3185,10 @@ async function importOnlineLanguage(lang: any) {
     lang.imported = true
     // Reload locales list
     const localesRes = await adminApi.getLocales()
-    languageList.value = (localesRes.data || []).map((l: any) => ({
+    const localesArray = Array.isArray(localesRes.data)
+      ? localesRes.data
+      : (localesRes.data?.locales || [])
+    languageList.value = localesArray.map((l: any) => ({
       webEnabled: !!l.webEnabled,
       gameEnabled: !!l.gameEnabled,
       code: l.code || '',
@@ -3104,7 +3267,10 @@ async function processThemeUploadedFile(file: File) {
         })
         // reload themes
         const themesRes = await adminApi.getThemes()
-        themeList.value = (themesRes.data || []).map((t: any) => ({
+        const themesArray = Array.isArray(themesRes.data)
+          ? themesRes.data
+          : (themesRes.data?.themes || [])
+        themeList.value = themesArray.map((t: any) => ({
           webEnabled: !!t.webEnabled,
           gameEnabled: !!t.gameEnabled,
           code: t.code || '',
@@ -3171,7 +3337,10 @@ async function importOnlineTheme(theme: any) {
     theme.imported = true
     // Reload themes list
     const themesRes = await adminApi.getThemes()
-    themeList.value = (themesRes.data || []).map((t: any) => ({
+    const themesArray = Array.isArray(themesRes.data)
+      ? themesRes.data
+      : (themesRes.data?.themes || [])
+    themeList.value = themesArray.map((t: any) => ({
       webEnabled: !!t.webEnabled,
       gameEnabled: !!t.gameEnabled,
       code: t.code || '',
@@ -3188,257 +3357,315 @@ async function importOnlineTheme(theme: any) {
 }
 
 async function saveAllSettings() {
+  console.log('[saveAllSettings] Starting settings save procedure...');
   saving.value = true
   try {
-    const promises: Promise<any>[] = []
+    const tasks: { name: string; run: () => Promise<any> }[] = []
 
     // 1. Economy Settings
-    promises.push(
-      adminApi.saveExchangeSettings({
-        shopToGameEnabled: economySettings.value.webToGameEnabled,
-        shopToGameRatio: Number(economySettings.value.webToGameRate),
-        gameToShopEnabled: economySettings.value.gameToWebEnabled,
-        gameToShopRatio: Number(economySettings.value.gameToWebRate)
+    if (isModuleDirty('economy')) {
+      tasks.push({
+        name: 'exchange',
+        run: () => adminApi.saveExchangeSettings({
+          shopToGameEnabled: economySettings.value.webToGameEnabled,
+          shopToGameRatio: Number(economySettings.value.webToGameRate),
+          gameToShopEnabled: economySettings.value.gameToWebEnabled,
+          gameToShopRatio: Number(economySettings.value.gameToWebRate)
+        })
       })
-    )
 
-    promises.push(
-      adminApi.saveMarketEconomySettings({
-        tradeFeePercent: economySettings.value.marketFeeEnabled ? Number(economySettings.value.marketFeePercent) : 0,
-        tradeTaxPercent: economySettings.value.marketTaxEnabled ? Number(economySettings.value.marketTaxPercent) : 0,
-        inflationMode: economySettings.value.treasuryEnabled ? 'TREASURY' : 'BURN',
-        inflationTreasuryUserId: Number(economySettings.value.treasuryAccountId || 0)
+      tasks.push({
+        name: 'marketEconomy',
+        run: () => adminApi.saveMarketEconomySettings({
+          tradeFeePercent: economySettings.value.marketFeeEnabled ? Number(economySettings.value.marketFeePercent) : 0,
+          tradeTaxPercent: economySettings.value.marketTaxEnabled ? Number(economySettings.value.marketTaxPercent) : 0,
+          inflationMode: economySettings.value.treasuryEnabled ? 'TREASURY' : 'BURN',
+          inflationTreasuryUserId: Number(economySettings.value.treasuryAccountId || 0)
+        })
       })
-    )
 
-    promises.push(
-      adminApi.saveCurrencyDisplaySettings({
-        shopCoinName: economySettings.value.webCoinName,
-        shopCoinShort: economySettings.value.webCoinSymbol,
-        gameCoinName: economySettings.value.gameCoinName,
-        gameCoinShort: economySettings.value.gameCoinSymbol
+      tasks.push({
+        name: 'currencyDisplay',
+        run: () => adminApi.saveCurrencyDisplaySettings({
+          shopCoinName: economySettings.value.webCoinName,
+          shopCoinShort: economySettings.value.webCoinSymbol,
+          gameCoinName: economySettings.value.gameCoinName,
+          gameCoinShort: economySettings.value.gameCoinSymbol
+        })
       })
-    )
-
-    // 2. Product Settings (Tags)
-    const tagsPayload = {
-      config: {
-        tags: productSettings.value.tags.map((t: any) => ({
-          code: t.name,
-          displayName: t.name,
-          enabled: t.visible !== false,
-          priority: Number(t.priority ?? 10),
-          materialIn: t.materialWhitelist ? t.materialWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
-          nbtHasAny: t.nbtKeywords ? t.nbtKeywords.split(',').map((x: string) => x.trim()).filter(Boolean) : []
-        }))
-      }
-    }
-    promises.push(adminApi.saveMarketTagsConfig(tagsPayload))
-
-    // 3. Permission Settings (Listing Limits)
-    const limitPayload = {
-      config: {
-        ...originalLimitationConfig.value,
-        rules: permissionSettings.value.listingLimits.map((r: any) => ({
-          id: r.id,
-          enabled: r.enabled !== false,
-          priority: Number(r.priority ?? 10),
-          actionType: r.actionType,
-          rejectErrorCode: r.rejectErrorCode,
-          triggerDirection: r.triggerDirection,
-          triggerMaterial: r.triggerMaterial ? r.triggerMaterial.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
-          triggerNbt: r.triggerNbt ? r.triggerNbt.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
-          missingPermission: r.missingPermission,
-          directionWhitelist: r.directionWhitelist ? r.directionWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
-          tradeModeWhitelist: r.tradeModeWhitelist ? r.tradeModeWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
-          currencyWhitelist: r.currencyWhitelist ? r.currencyWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
-          tagWhitelist: r.tagWhitelist ? r.tagWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
-          enforcedTag: r.enforcedTag,
-          costEnabled: !!r.costEnabled,
-          costCurrency: r.costCurrency,
-          costAmount: Number(r.costAmount ?? 0)
-        }))
-      }
-    }
-    promises.push(adminApi.saveMarketLimitationConfig(limitPayload))
-
-    // 4. Permission Settings (Visual Policies)
-    promises.push(
-      adminApi.saveVisualSettings({
-        globalCustomIconEnabled: permissionSettings.value.customPermissions.globalCustomIconEnabled,
-        globalCustomNameEnabled: permissionSettings.value.customPermissions.globalCustomNameEnabled,
-        officialProductCustomIconEnabled: permissionSettings.value.customPermissions.officialAllowCustomIcon,
-        officialProductCustomNameEnabled: permissionSettings.value.customPermissions.officialAllowCustomName,
-        officialProductUploadImageEnabled: permissionSettings.value.customPermissions.officialAllowUploadImage,
-        marketListingCustomIconEnabled: permissionSettings.value.customPermissions.playerAllowCustomIcon,
-        marketListingCustomNameEnabled: permissionSettings.value.customPermissions.playerAllowCustomName,
-        marketListingUploadImageEnabled: permissionSettings.value.customPermissions.playerAllowUploadImage,
-        iconPolicyMode: permissionSettings.value.customPermissions.iconPolicy,
-        namePolicyMode: permissionSettings.value.customPermissions.namePolicy
-      })
-    )
-
-    // 5. Permission Settings (Market Runtime)
-    promises.push(
-      adminApi.saveMarketRuntimeSettings({
-        marketMaxActiveListings: Number(permissionSettings.value.marketParams.defaultMaxListings),
-        autoRefreshThreshold: Number(permissionSettings.value.marketParams.autoRestockThreshold),
-        defaultTransferBatchSize: Number(permissionSettings.value.marketParams.defaultSingleExtraction),
-        maxTransferBatchSize: Number(permissionSettings.value.marketParams.maxSingleExtraction),
-        defaultTransitStock: Number(permissionSettings.value.marketParams.defaultTransitStock),
-        maxTransitStock: Number(permissionSettings.value.marketParams.maxTransitStock)
-      })
-    )
-
-    // 6. Frontend Settings (Leaderboard)
-    promises.push(
-      adminApi.saveLeaderboardSettings({
-        enabled: frontendSettings.value.leaderboard.enabled,
-        showOnlineStatus: frontendSettings.value.leaderboard.showOnlineStatus,
-        defaultMetric: frontendSettings.value.leaderboard.defaultDimension.toUpperCase(),
-        defaultOrder: frontendSettings.value.leaderboard.defaultSortDirection.toUpperCase()
-      })
-    )
-
-    // 7. Frontend Settings (Webshop Runtime)
-    promises.push(
-      adminApi.saveWebshopRuntimeSettings({
-        ...originalWebshopRuntime.value,
-        defaultLocale: frontendSettings.value.siteParams.defaultLanguage,
-        timeZone: frontendSettings.value.siteParams.timezone,
-        sessionExpireHours: Number(frontendSettings.value.siteParams.sessionExpiryHours),
-        bindRequestExpireMinutes: Number(frontendSettings.value.siteParams.bindingRequestExpiryMinutes),
-        accessTokenLength: Number(frontendSettings.value.siteParams.accessTokenLength),
-        deliveryBatchSize: Number(frontendSettings.value.siteParams.deliveryBatchSize),
-        deliveryRetrySeconds: Number(frontendSettings.value.siteParams.deliveryRetryIntervalSeconds),
-        orderCooldownSeconds: Number(frontendSettings.value.siteParams.orderCooldownSeconds),
-        allowSharedClaimCommand: frontendSettings.value.siteParams.allowSubstituteCommand,
-        refundUndeliveredEnabled: frontendSettings.value.siteParams.allowRefundUnshipped
-      })
-    )
-
-    // 8. Frontend Settings (Broadcast templates)
-    promises.push(
-      adminApi.saveBroadcastSettings({
-        enabled: frontendSettings.value.broadcast.enabled,
-        listingCreatedTemplate: frontendSettings.value.broadcast.listTemplate,
-        tradeSuccessTemplate: frontendSettings.value.broadcast.dealTemplate,
-        auctionBidTemplate: frontendSettings.value.broadcast.bidTemplate,
-        auctionSealedBidTemplate: frontendSettings.value.broadcast.sealedBidTemplate
-      })
-    )
-
-    // 9. Other Settings (Maintenance)
-    promises.push(
-      adminApi.saveMaintenanceSettings({
-        cleanupIntervalMinutes: Number(otherSettings.value.maintenance.cleanupIntervalMinutes),
-        pendingBindRetentionHours: Number(otherSettings.value.maintenance.pendingBindExpiryHours),
-        pendingPasswordRetentionHours: Number(otherSettings.value.maintenance.pendingPasswordExpiryHours),
-        bindRequestRetentionHours: Number(otherSettings.value.maintenance.bindRequestExpiryHours),
-        redeemCodeRetentionDays: Number(otherSettings.value.maintenance.redeemCodeExpiryDays)
-      })
-    )
-
-    // 10. Other Settings (Logging)
-    promises.push(
-      adminApi.saveLoggingSettings({
-        enabled: otherSettings.value.logging.fileLogEnabled,
-        level: otherSettings.value.logging.logLevel.toUpperCase(),
-        directory: otherSettings.value.logging.logDirectory,
-        maxFileSizeMb: Number(otherSettings.value.logging.maxFileSizeMB),
-        maxFiles: Number(otherSettings.value.logging.maxBackupFiles),
-        retentionDays: Number(otherSettings.value.logging.retentionDays)
-      })
-    )
-
-    // 11. Sync Material Overrides (Added, Deleted, Modified)
-    const currentOverrides = productSettings.value.materialOverrides
-    const initialOverrides = initialMaterialOverrides
-
-    // Deletes
-    const deletes = initialOverrides.filter(init => !currentOverrides.some(curr => curr.id === init.id))
-    for (const del of deletes) {
-      if (del.id) {
-        promises.push(adminApi.deleteMaterialOverride({ materialKey: del.id }))
-      }
     }
 
-    // Upserts
-    for (const curr of currentOverrides) {
-      if (!curr.id) continue
-      const init = initialOverrides.find(i => i.id === curr.id)
-      const hasChanged = !init || init.customName !== curr.customName || init.iconUrl !== curr.iconUrl || init.enabled !== curr.enabled
-      if (hasChanged) {
-        promises.push(
-          adminApi.upsertMaterialOverride({
-            materialKey: curr.id,
-            displayNameOverride: curr.customName,
-            iconPath: curr.iconUrl,
-            enabled: curr.enabled !== false
+    // 2. Product Settings
+    if (isModuleDirty('products')) {
+      const tagsPayload = {
+        config: {
+          tags: productSettings.value.tags.map((t: any) => ({
+            code: t.name,
+            displayName: t.name,
+            enabled: t.visible !== false,
+            priority: Number(t.priority ?? 10),
+            materialIn: t.materialWhitelist ? t.materialWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
+            nbtHasAny: t.nbtKeywords ? t.nbtKeywords.split(',').map((x: string) => x.trim()).filter(Boolean) : []
+          }))
+        }
+      }
+      tasks.push({
+        name: 'marketTags',
+        run: () => adminApi.saveMarketTagsConfig(tagsPayload)
+      })
+
+      const currentOverrides = productSettings.value.materialOverrides
+      const initialOverrides = initialMaterialOverrides
+
+      // Deletes
+      const deletes = initialOverrides.filter(init => !currentOverrides.some(curr => curr.id === init.id))
+      for (const del of deletes) {
+        if (del.id) {
+          tasks.push({
+            name: `deleteOverride_${del.id}`,
+            run: () => adminApi.deleteMaterialOverride({ materialKey: del.id })
           })
-        )
-      }
-    }
-
-    // 12. Sync Languages Default/Toggles/Deletes
-    if (frontendSettings.value.siteParams.defaultLanguage && frontendSettings.value.siteParams.defaultLanguage !== originalWebshopRuntime.value.defaultLocale) {
-      promises.push(adminApi.setDefaultLocale({ defaultLocale: frontendSettings.value.siteParams.defaultLanguage }))
-    }
-
-    // Language list diffs
-    const currentLangs = languageList.value
-    const initialLangs = initialLanguageList
-
-    // Deletes
-    const langDeletes = initialLangs.filter(init => !currentLangs.some(curr => curr.code === init.code))
-    for (const del of langDeletes) {
-      if (del.code) {
-        promises.push(adminApi.localeAction({ locale: del.code, action: 'remove' }))
-      }
-    }
-
-    // Toggles
-    for (const curr of currentLangs) {
-      const init = initialLangs.find(i => i.code === curr.code)
-      if (init) {
-        if (!!init.webEnabled !== !!curr.webEnabled) {
-          promises.push(adminApi.localeAction({ locale: curr.code, action: 'toggleWeb' }))
         }
-        if (!!init.gameEnabled !== !!curr.gameEnabled) {
-          promises.push(adminApi.localeAction({ locale: curr.code, action: 'toggleGame' }))
+      }
+
+      // Upserts
+      for (const curr of currentOverrides) {
+        if (!curr.id) continue
+        const init = initialOverrides.find(i => i.id === curr.id)
+        const hasChanged = !init || init.customName !== curr.customName || init.iconUrl !== curr.iconUrl || init.enabled !== curr.enabled
+        if (hasChanged) {
+          tasks.push({
+            name: `upsertOverride_${curr.id}`,
+            run: () => adminApi.upsertMaterialOverride({
+              materialKey: curr.id,
+              displayNameOverride: curr.customName,
+              iconPath: curr.iconUrl,
+              enabled: curr.enabled !== false
+            })
+          })
         }
       }
     }
 
-    // 13. Sync Themes Toggles/Deletes
-    const currentThemesList = themeList.value
-    const initialThemes = initialThemeList
-
-    // Deletes
-    const themeDeletes = initialThemes.filter(init => !currentThemesList.some(curr => curr.code === init.code))
-    for (const del of themeDeletes) {
-      if (del.code) {
-        promises.push(adminApi.themeAction({ themeId: del.code, action: 'remove' }))
+    // 3. Permission Settings
+    if (isModuleDirty('permissions')) {
+      const limitPayload = {
+        config: {
+          ...originalLimitationConfig.value,
+          rules: permissionSettings.value.listingLimits.map((r: any) => ({
+            id: r.id,
+            enabled: r.enabled !== false,
+            priority: Number(r.priority ?? 10),
+            actionType: r.actionType,
+            rejectErrorCode: r.rejectErrorCode,
+            triggerDirection: r.triggerDirection,
+            triggerMaterial: r.triggerMaterial ? r.triggerMaterial.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
+            triggerNbt: r.triggerNbt ? r.triggerNbt.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
+            missingPermission: r.missingPermission,
+            directionWhitelist: r.directionWhitelist ? r.directionWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
+            tradeModeWhitelist: r.tradeModeWhitelist ? r.tradeModeWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
+            currencyWhitelist: r.currencyWhitelist ? r.currencyWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
+            tagWhitelist: r.tagWhitelist ? r.tagWhitelist.split(',').map((x: string) => x.trim()).filter(Boolean) : [],
+            enforcedTag: r.enforcedTag,
+            costEnabled: !!r.costEnabled,
+            costCurrency: r.costCurrency,
+            costAmount: Number(r.costAmount ?? 0)
+          }))
+        }
       }
+      tasks.push({
+        name: 'marketLimitation',
+        run: () => adminApi.saveMarketLimitationConfig(limitPayload)
+      })
+
+      tasks.push({
+        name: 'visualSettings',
+        run: () => adminApi.saveVisualSettings({
+          globalCustomIconEnabled: permissionSettings.value.customPermissions.globalCustomIconEnabled,
+          globalCustomNameEnabled: permissionSettings.value.customPermissions.globalCustomNameEnabled,
+          officialProductCustomIconEnabled: permissionSettings.value.customPermissions.officialAllowCustomIcon,
+          officialProductCustomNameEnabled: permissionSettings.value.customPermissions.officialAllowCustomName,
+          officialProductUploadImageEnabled: permissionSettings.value.customPermissions.officialAllowUploadImage,
+          marketListingCustomIconEnabled: permissionSettings.value.customPermissions.playerAllowCustomIcon,
+          marketListingCustomNameEnabled: permissionSettings.value.customPermissions.playerAllowCustomName,
+          marketListingUploadImageEnabled: permissionSettings.value.customPermissions.playerAllowUploadImage,
+          iconPolicyMode: permissionSettings.value.customPermissions.iconPolicy,
+          namePolicyMode: permissionSettings.value.customPermissions.namePolicy
+        })
+      })
+
+      tasks.push({
+        name: 'marketRuntime',
+        run: () => adminApi.saveMarketRuntimeSettings({
+          marketMaxActiveListings: Number(permissionSettings.value.marketParams.defaultMaxListings),
+          autoRefreshThreshold: Number(permissionSettings.value.marketParams.autoRestockThreshold),
+          defaultTransferBatchSize: Number(permissionSettings.value.marketParams.defaultSingleExtraction),
+          maxTransferBatchSize: Number(permissionSettings.value.marketParams.maxSingleExtraction),
+          defaultTransitStock: Number(permissionSettings.value.marketParams.defaultTransitStock),
+          maxTransitStock: Number(permissionSettings.value.marketParams.maxTransitStock)
+        })
+      })
     }
 
-    // Toggles
-    for (const curr of currentThemesList) {
-      const init = initialThemes.find(i => i.code === curr.code)
-      if (init) {
-        if (!!init.webEnabled !== !!curr.webEnabled) {
-          promises.push(adminApi.themeAction({ themeId: curr.code, action: 'toggleWeb' }))
+    // 4. Frontend Settings
+    if (isModuleDirty('frontend')) {
+      tasks.push({
+        name: 'leaderboard',
+        run: () => adminApi.saveLeaderboardSettings({
+          enabled: frontendSettings.value.leaderboard.enabled,
+          showOnlineStatus: frontendSettings.value.leaderboard.showOnlineStatus,
+          defaultMetric: frontendSettings.value.leaderboard.defaultDimension.toUpperCase(),
+          defaultOrder: frontendSettings.value.leaderboard.defaultSortDirection.toUpperCase()
+        })
+      })
+
+      tasks.push({
+        name: 'webshopRuntime',
+        run: () => adminApi.saveWebshopRuntimeSettings({
+          ...originalWebshopRuntime.value,
+          defaultLocale: frontendSettings.value.siteParams.defaultLanguage,
+          timeZone: frontendSettings.value.siteParams.timezone,
+          sessionExpireHours: Number(frontendSettings.value.siteParams.sessionExpiryHours),
+          bindRequestExpireMinutes: Number(frontendSettings.value.siteParams.bindingRequestExpiryMinutes),
+          accessTokenLength: Number(frontendSettings.value.siteParams.accessTokenLength),
+          defaultTransitStock: Number(frontendSettings.value.siteParams.sessionExpiryHours),
+          deliveryBatchSize: Number(frontendSettings.value.siteParams.deliveryBatchSize),
+          deliveryRetrySeconds: Number(frontendSettings.value.siteParams.deliveryRetryIntervalSeconds),
+          orderCooldownSeconds: Number(frontendSettings.value.siteParams.orderCooldownSeconds),
+          allowSharedClaimCommand: frontendSettings.value.siteParams.allowSubstituteCommand,
+          refundUndeliveredEnabled: frontendSettings.value.siteParams.allowRefundUnshipped
+        })
+      })
+
+      tasks.push({
+        name: 'broadcast',
+        run: () => adminApi.saveBroadcastSettings({
+          enabled: frontendSettings.value.broadcast.enabled,
+          listingCreatedTemplate: frontendSettings.value.broadcast.listTemplate,
+          tradeSuccessTemplate: frontendSettings.value.broadcast.dealTemplate,
+          auctionBidTemplate: frontendSettings.value.broadcast.bidTemplate,
+          auctionSealedBidTemplate: frontendSettings.value.broadcast.sealedBidTemplate
+        })
+      })
+
+      if (frontendSettings.value.siteParams.defaultLanguage && frontendSettings.value.siteParams.defaultLanguage !== originalWebshopRuntime.value.defaultLocale) {
+        tasks.push({
+          name: 'setDefaultLocale',
+          run: () => adminApi.setDefaultLocale({ defaultLocale: frontendSettings.value.siteParams.defaultLanguage })
+        })
+      }
+
+      const currentLangs = languageList.value
+      const initialLangs = initialLanguageList
+
+      // Deletes
+      const langDeletes = initialLangs.filter(init => !currentLangs.some(curr => curr.code === init.code))
+      for (const del of langDeletes) {
+        if (del.code) {
+          tasks.push({
+            name: `deleteLang_${del.code}`,
+            run: () => adminApi.localeAction({ locale: del.code, action: 'remove' })
+          })
+        }
+      }
+
+      // Toggles
+      for (const curr of currentLangs) {
+        const init = initialLangs.find(i => i.code === curr.code)
+        if (init) {
+          if (!!init.webEnabled !== !!curr.webEnabled) {
+            tasks.push({
+              name: `toggleWebLang_${curr.code}`,
+              run: () => adminApi.localeAction({ locale: curr.code, action: 'toggleWeb' })
+            })
+          }
+          if (!!init.gameEnabled !== !!curr.gameEnabled) {
+            tasks.push({
+              name: `toggleGameLang_${curr.code}`,
+              run: () => adminApi.localeAction({ locale: curr.code, action: 'toggleGame' })
+            })
+          }
+        }
+      }
+
+      const currentThemesList = themeList.value
+      const initialThemes = initialThemeList
+
+      // Deletes
+      const themeDeletes = initialThemes.filter(init => !currentThemesList.some(curr => curr.code === init.code))
+      for (const del of themeDeletes) {
+        if (del.code) {
+          tasks.push({
+            name: `deleteTheme_${del.code}`,
+            run: () => adminApi.themeAction({ themeId: del.code, action: 'remove' })
+          })
+        }
+      }
+
+      // Toggles
+      for (const curr of currentThemesList) {
+        const init = initialThemes.find(i => i.code === curr.code)
+        if (init) {
+          if (!!init.webEnabled !== !!curr.webEnabled) {
+            tasks.push({
+              name: `toggleWebTheme_${curr.code}`,
+              run: () => adminApi.themeAction({ themeId: curr.code, action: 'toggleWeb' })
+            })
+          }
         }
       }
     }
 
-    // Wait for all saves to complete
-    await Promise.all(promises)
+    // 5. Other Settings
+    if (isModuleDirty('other')) {
+      tasks.push({
+        name: 'maintenance',
+        run: () => adminApi.saveMaintenanceSettings({
+          cleanupIntervalMinutes: Number(otherSettings.value.maintenance.cleanupIntervalMinutes),
+          pendingBindRetentionHours: Number(otherSettings.value.maintenance.pendingBindExpiryHours),
+          pendingPasswordRetentionHours: Number(otherSettings.value.maintenance.pendingPasswordExpiryHours),
+          bindRequestRetentionHours: Number(otherSettings.value.maintenance.bindRequestExpiryHours),
+          redeemCodeRetentionDays: Number(otherSettings.value.maintenance.redeemCodeExpiryDays)
+        })
+      })
+
+      tasks.push({
+        name: 'logging',
+        run: () => adminApi.saveLoggingSettings({
+          enabled: otherSettings.value.logging.fileLogEnabled,
+          level: otherSettings.value.logging.logLevel.toUpperCase(),
+          directory: otherSettings.value.logging.logDirectory,
+          maxFileSizeMb: Number(otherSettings.value.logging.maxFileSizeMB),
+          maxFiles: Number(otherSettings.value.logging.maxBackupFiles),
+          retentionDays: Number(otherSettings.value.logging.retentionDays)
+        })
+      })
+    }
+
+    console.log('[saveAllSettings] Registered dirty tasks to execute:', tasks.map(t => t.name));
+    
+    if (tasks.length > 0) {
+      let executedCount = 0;
+      for (const task of tasks) {
+        try {
+          console.log(`[saveAllSettings] Executing save task (${++executedCount}/${tasks.length}): ${task.name}...`);
+          await task.run()
+          console.log(`[saveAllSettings] Task completed successfully: ${task.name}`);
+          await new Promise(resolve => setTimeout(resolve, 80))
+        } catch (taskErr) {
+          console.error(`[saveAllSettings] Failed to execute save task: ${task.name}`, taskErr)
+          throw taskErr
+        }
+      }
+      console.log('[saveAllSettings] All settings save tasks executed successfully!');
+    } else {
+      console.log('[saveAllSettings] No changes detected in any modules. Skipping save requests.');
+    }
 
     snackbar.value = true
-    
-    // Reload everything to get the fresh database state (which also resets the baseline lists and snapshots)
+    console.log('[saveAllSettings] Reloading settings from database to synchronize baseline...');
     await loadAllSettings()
+    console.log('[saveAllSettings] Synchronized baseline settings successfully!');
   } catch (err: any) {
     console.error(err)
     alert(t('admin.uiText.saveSettingsFailed') + (err.response?.data?.message || err.message || '未知错误'))
@@ -3503,5 +3730,30 @@ async function saveAllSettings() {
 
 .fab-pulse {
   animation: fab-pulse 2s ease-in-out infinite;
+}
+
+.unsaved-banner-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90%;
+  max-width: 650px;
+  z-index: 100;
+}
+
+.unsaved-banner {
+  background: rgba(var(--v-theme-surface), 0.9) !important;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(var(--v-theme-warning), 0.3) !important;
+}
+
+.pulse-icon {
+  animation: warning-pulse 2.5s infinite;
+}
+
+@keyframes warning-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.93); }
 }
 </style>
