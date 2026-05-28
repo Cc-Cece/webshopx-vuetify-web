@@ -2740,4 +2740,57 @@ onMounted(async () => {
     transform: translateY(0);
   }
 }
+
+/* =============================================================
+ * 7. Dark Mode & Various Themes Adaptations
+ * ============================================================= */
+.v-theme--dark .bg-white {
+  background-color: #1e1e1e !important;
+  color: #f1f5f9 !important;
+}
+
+.v-theme--dark .bg-white :deep(.v-field) {
+  background-color: #1a1a1a !important;
+}
+
+.v-theme--dark .bg-grey-lighten-4 {
+  background-color: #2b2b2b !important;
+}
+
+.v-theme--dark .bg-grey-lighten-5 {
+  background-color: #202020 !important;
+}
+
+.v-theme--dark .header-card {
+  background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.15) 0%, #1e1e1e 100%) !important;
+  border-color: rgba(var(--v-theme-success), 0.15) !important;
+}
+
+.v-theme--dark .hover-bg-row:hover {
+  background-color: rgba(var(--v-theme-success), 0.08) !important;
+}
+
+.v-theme--dark .border-warning-dashed {
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+.v-theme--dark .border-success-light {
+  border-left-color: rgb(var(--v-theme-success)) !important;
+}
+
+.v-theme--dark .v-card {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.v-theme--dark .border-card-top-success {
+  border-top: 4px solid rgb(var(--v-theme-success)) !important;
+}
+
+.v-theme--dark .border {
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.v-theme--dark .border-b {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
 </style>
