@@ -13,6 +13,7 @@ export const adminApi = {
   getMaterialsMeta: () => apiClient.get("/meta/materials"),
   createRedeemCode: (payload: Record<string, unknown>) => apiClient.post("/admin/redeem/create", payload),
   getRedeemList: (params?: QueryParams) => apiClient.get("/admin/redeem/list", { params: { limit: 200, ...params } }),
+  setRedeemActive: (payload: Record<string, unknown>) => apiClient.post("/admin/redeem/active", payload),
   upsertProduct: (payload: Record<string, unknown>) => apiClient.post("/admin/products/upsert", payload),
   uploadProductIcon: (query: QueryParams, payload: Record<string, unknown>) =>
     apiClient.post("/admin/products/icon", toFormData(payload), {

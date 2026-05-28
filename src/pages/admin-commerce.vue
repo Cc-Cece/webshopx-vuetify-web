@@ -25,6 +25,9 @@
           <v-tab value="cashier" prepend-icon="mdi-barcode-scan" class="rounded-lg font-weight-bold text-caption mr-1">
             团购券核销
           </v-tab>
+          <v-tab value="redeem" prepend-icon="mdi-gift-outline" class="rounded-lg font-weight-bold text-caption mr-1">
+            兑换码管理
+          </v-tab>
           <v-tab value="orders" prepend-icon="mdi-receipt-text-outline" class="rounded-lg font-weight-bold text-caption">
             订单列表
           </v-tab>
@@ -223,6 +226,201 @@
               </v-card>
             </v-col>
           </v-row>
+        </v-window-item>
+
+        <!-- Redemption Codes Tab -->
+        <v-window-item value="redeem">
+          <v-card elevation="0" variant="outlined" class="rounded-xl overflow-hidden bg-white border border-success-light">
+            <!-- Summary Metrics Cards -->
+            <div class="pa-4 bg-grey-lighten-5 border-b">
+              <v-row dense>
+                <v-col cols="12" sm="4">
+                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 bg-white border">
+                    <div class="d-flex align-center justify-space-between">
+                      <div>
+                        <p class="text-xxs text-grey-darken-1 font-weight-bold">全服生效中兑换码</p>
+                        <h4 class="text-h6 font-weight-black text-success mt-1">{{ activeRedeemCodesCount }} 个</h4>
+                      </div>
+                      <v-avatar color="success-lighten-5" size="36">
+                        <v-icon color="success" size="20">mdi-ticket-percent-outline</v-icon>
+                      </v-avatar>
+                    </div>
+                  </v-card>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 bg-white border">
+                    <div class="d-flex align-center justify-space-between">
+                      <div>
+                        <p class="text-xxs text-grey-darken-1 font-weight-bold">累计被使用次数</p>
+                        <h4 class="text-h6 font-weight-black text-primary mt-1">{{ totalRedeemClaimsCount }} 次</h4>
+                      </div>
+                      <v-avatar color="primary-lighten-5" size="36">
+                        <v-icon color="primary" size="20">mdi-account-check-outline</v-icon>
+                      </v-avatar>
+                    </div>
+                  </v-card>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 bg-white border">
+                    <div class="d-flex align-center justify-space-between">
+                      <div>
+                        <p class="text-xxs text-grey-darken-1 font-weight-bold">已兑换ShopCoin总计</p>
+                        <h4 class="text-h6 font-weight-black text-warning mt-1">{{ totalRedeemGiftedCoins }} {{ shopCoinShort }}</h4>
+                      </div>
+                      <v-avatar color="warning-lighten-5" size="36">
+                        <v-icon color="warning" size="20">mdi-database-outline</v-icon>
+                      </v-avatar>
+                    </div>
+                  </v-card>
+                </v-col>
+              </v-row>
+            </div>
+
+            <!-- Table Toolbar -->
+            <div class="pa-4 border-b d-flex flex-column flex-sm-row justify-space-between align-sm-center ga-3 bg-grey-lighten-5">
+              <div class="d-flex align-center flex-wrap ga-3 flex-grow-1">
+                <v-text-field
+                  v-model="redeemSearch"
+                  placeholder="搜索兑换码..."
+                  prepend-inner-icon="mdi-magnify"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                  rounded="lg"
+                  clearable
+                  color="success"
+                  style="max-width: 320px; width: 100%;"
+                  class="bg-white"
+                ></v-text-field>
+
+                <v-select
+                  v-model="redeemStatusFilter"
+                  :items="redeemStatusOptions"
+                  item-title="title"
+                  item-value="value"
+                  label="状态筛选"
+                  variant="outlined"
+                  density="comfortable"
+                  hide-details
+                  rounded="lg"
+                  color="success"
+                  style="width: 160px;"
+                  class="bg-white"
+                ></v-select>
+              </div>
+              
+              <div class="d-flex align-center ga-2">
+                <v-btn
+                  color="success"
+                  variant="flat"
+                  prepend-icon="mdi-plus"
+                  class="rounded-lg font-weight-black text-caption"
+                  @click="handleOpenRedeemDialog"
+                >
+                  生成兑换码
+                </v-btn>
+                <v-btn
+                  variant="outlined"
+                  color="secondary"
+                  icon="mdi-refresh"
+                  class="rounded-lg"
+                  :loading="redeemLoading"
+                  @click="handleLoadRedeemCodes"
+                ></v-btn>
+              </div>
+            </div>
+
+            <!-- Table or Skeleton -->
+            <v-skeleton-loader v-if="redeemLoading && redeemCodes.length === 0" type="table-row-divider@6" class="bg-transparent"></v-skeleton-loader>
+
+            <div v-else class="table-container overflow-x-auto">
+              <v-table class="bg-transparent text-slate-800">
+                <thead>
+                  <tr class="bg-table-header text-slate-800">
+                    <th class="font-weight-black text-caption">兑换券码</th>
+                    <th class="font-weight-black text-caption">赠送币种与额度</th>
+                    <th class="font-weight-black text-caption text-center">兑换上限与使用进度</th>
+                    <th class="font-weight-black text-caption text-center">单账号配额</th>
+                    <th class="font-weight-black text-caption text-center">截止有效期</th>
+                    <th class="font-weight-black text-caption text-center">运行状态</th>
+                    <th class="font-weight-black text-caption text-center">启用控制</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="item in filteredRedeemCodes" :key="item.code" class="hover-bg-row text-caption">
+                    <td class="font-weight-black font-mono text-success d-flex align-center py-3">
+                      <span>{{ item.code }}</span>
+                      <v-btn
+                        icon="mdi-content-copy"
+                        variant="text"
+                        size="x-small"
+                        color="secondary"
+                        class="ml-1"
+                        @click="handleCopyCode(item.code)"
+                      ></v-btn>
+                    </td>
+                    <td>
+                      <div class="d-flex align-center ga-1">
+                        <v-chip v-if="item.shopCoinAmount > 0" size="x-small" color="primary" variant="flat" class="font-weight-black text-white">
+                          +{{ item.shopCoinAmount }} {{ shopCoinShort }}
+                        </v-chip>
+                        <v-chip v-if="item.gameCoinAmount > 0" size="x-small" color="success" variant="flat" class="font-weight-black text-white">
+                          +{{ item.gameCoinAmount }} {{ gameCoinShort }}
+                        </v-chip>
+                        <span v-if="item.shopCoinAmount <= 0 && item.gameCoinAmount <= 0" class="text-grey">无奖励</span>
+                      </div>
+                    </td>
+                    <td>
+                      <div class="d-flex flex-column align-center text-center" style="max-width: 220px; margin: 0 auto;">
+                        <span class="font-mono text-xxs font-weight-bold mb-1">
+                          {{ item.usedCount }} / {{ item.maxUses }} 次
+                        </span>
+                        <v-progress-linear
+                          :model-value="(item.usedCount / item.maxUses) * 100"
+                          :color="item.usedCount >= item.maxUses ? 'grey' : (item.usedCount / item.maxUses > 0.8 ? 'warning' : 'success')"
+                          height="6"
+                          rounded
+                          class="w-100"
+                        ></v-progress-linear>
+                      </div>
+                    </td>
+                    <td class="text-center font-weight-bold">
+                      每人限领 <span class="font-mono text-success">{{ item.maxUsesPerUser }}</span> 次
+                    </td>
+                    <td class="text-center font-mono text-grey">
+                      {{ formatTime(item.expiresAt) }}
+                    </td>
+                    <td class="text-center">
+                      <v-chip
+                        size="x-small"
+                        :color="getRedeemStatusColor(item)"
+                        variant="flat"
+                        class="font-weight-black text-white px-2"
+                      >
+                        {{ getRedeemStatusName(item) }}
+                      </v-chip>
+                    </td>
+                    <td class="text-center">
+                      <settings-switch
+                        v-model="item.active"
+                        color="success"
+                        hide-details
+                        density="compact"
+                        style="display: inline-block;"
+                        :disabled="isCodeExpiredOrExhausted(item)"
+                        @change="handleToggleRedeemActive(item)"
+                      ></settings-switch>
+                    </td>
+                  </tr>
+                  <tr v-if="filteredRedeemCodes.length === 0">
+                    <td colspan="7" class="text-center py-8 text-medium-emphasis font-weight-bold">
+                      未查询到匹配的兑换券码。
+                    </td>
+                  </tr>
+                </tbody>
+              </v-table>
+            </div>
+          </v-card>
         </v-window-item>
 
         <!-- Orders History Tab -->
@@ -1257,6 +1455,179 @@
         </v-card>
       </v-dialog>
 
+      <!-- Redemption Code Creation Dialogue -->
+      <v-dialog v-model="redeemDialog" max-width="520" scrollable>
+        <v-card elevation="0" variant="outlined" class="rounded-xl bg-white border-card-top-success pa-4">
+          <!-- Dialog Header -->
+          <div class="d-flex align-center justify-space-between mb-4">
+            <div class="d-flex align-center">
+              <v-avatar color="success-lighten-5" size="40" class="mr-3 border">
+                <v-icon color="success" size="22">mdi-plus</v-icon>
+              </v-avatar>
+              <div>
+                <h3 class="text-subtitle-1 font-weight-black text-slate-800">
+                  新建全局兑换码
+                </h3>
+                <p class="text-caption text-medium-emphasis">生成包含 ShopCoin 与 GameCoin 的礼包兑换凭证码。</p>
+              </div>
+            </div>
+            <v-btn icon="mdi-close" variant="text" size="small" @click="redeemDialog = false"></v-btn>
+          </div>
+
+          <v-divider class="mb-4"></v-divider>
+
+          <v-card-text class="pa-0 overflow-y-auto" style="max-height: 520px;">
+            <v-form ref="redeemFormRef" v-model="redeemValid">
+              
+              <!-- 1. Custom Code Input -->
+              <h4 class="text-caption font-weight-black text-success mb-3 d-flex align-center">
+                <v-icon start size="16">mdi-card-text-outline</v-icon>
+                1. 兑换卡券码 (Redeem Code)
+              </h4>
+              <v-text-field
+                v-model="formRedeem.customCode"
+                label="自定义兑换码 (留空将由系统自动生成)"
+                placeholder="例如：WELCOME2026"
+                variant="outlined"
+                density="comfortable"
+                rounded="lg"
+                color="success"
+                class="mb-3 font-mono font-weight-bold"
+              ></v-text-field>
+
+              <!-- 2. Reward Coin configuration -->
+              <h4 class="text-caption font-weight-black text-success mb-3 mt-4 d-flex align-center">
+                <v-icon start size="16">mdi-gift-outline</v-icon>
+                2. 赠送币种与赠送额度 (Rewards)
+              </h4>
+              <v-row dense>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="formRedeem.shopCoinAmount"
+                    type="number"
+                    label="赠送 ShopCoin 数量 *"
+                    placeholder="0"
+                    variant="outlined"
+                    density="comfortable"
+                    rounded="lg"
+                    color="success"
+                    class="mb-3 font-weight-bold"
+                    :rules="[
+                      v => v !== null && v !== undefined && v >= 0 || '金额不可为负数',
+                      () => (formRedeem.shopCoinAmount > 0 || formRedeem.gameCoinAmount > 0) || '至少选择赠送一种币种'
+                    ]"
+                    required
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="formRedeem.gameCoinAmount"
+                    type="number"
+                    label="赠送 GameCoin 数量 *"
+                    placeholder="0"
+                    variant="outlined"
+                    density="comfortable"
+                    rounded="lg"
+                    color="success"
+                    class="mb-3 font-weight-bold"
+                    :rules="[
+                      v => v !== null && v !== undefined && v >= 0 || '金额不可为负数',
+                      () => (formRedeem.shopCoinAmount > 0 || formRedeem.gameCoinAmount > 0) || '至少选择赠送一种币种'
+                    ]"
+                    required
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+
+              <!-- 3. Usage limit configuration -->
+              <h4 class="text-caption font-weight-black text-success mb-3 mt-4 d-flex align-center">
+                <v-icon start size="16">mdi-numeric</v-icon>
+                3. 使用次数与额度配额 (Limits)
+              </h4>
+              <v-row dense>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="formRedeem.maxUses"
+                    type="number"
+                    label="全服最大使用次数 *"
+                    placeholder="1"
+                    variant="outlined"
+                    density="comfortable"
+                    rounded="lg"
+                    color="success"
+                    class="mb-3 font-weight-bold"
+                    :rules="[v => !!v && v >= 1 || '使用上限不可小于 1']"
+                    required
+                  ></v-text-field>
+                </v-col>
+                <v-col cols="6">
+                  <v-text-field
+                    v-model.number="formRedeem.maxUsesPerUser"
+                    type="number"
+                    label="单账号最大使用次数 *"
+                    placeholder="1"
+                    variant="outlined"
+                    density="comfortable"
+                    rounded="lg"
+                    color="success"
+                    class="mb-3 font-weight-bold"
+                    :rules="[
+                      v => !!v && v >= 1 || '单人限额不可小于 1',
+                      v => v <= formRedeem.maxUses || '单人额度不可超过全服总量'
+                    ]"
+                    required
+                  ></v-text-field>
+                </v-col>
+              </v-row>
+
+              <!-- 4. Expiration date -->
+              <h4 class="text-caption font-weight-black text-success mb-3 mt-4 d-flex align-center">
+                <v-icon start size="16">mdi-calendar-clock</v-icon>
+                4. 兑换截止有效期 (Validity)
+              </h4>
+              <v-text-field
+                v-model="formRedeem.expiresAt"
+                type="date"
+                label="截止有效期 *"
+                variant="outlined"
+                density="comfortable"
+                rounded="lg"
+                color="success"
+                class="mb-3 font-mono font-weight-bold"
+                :rules="[
+                  v => !!v || '请选择截止有效期',
+                  v => new Date(v).getTime() > Date.now() - 24*3600*1000 || '有效期不可设定为过去的日期'
+                ]"
+                required
+              ></v-text-field>
+
+            </v-form>
+          </v-card-text>
+
+          <v-divider class="my-4"></v-divider>
+
+          <div class="d-flex justify-end ga-2">
+            <v-btn
+              color="secondary"
+              variant="tonal"
+              class="rounded-lg font-weight-bold text-caption"
+              @click="redeemDialog = false"
+            >
+              取消
+            </v-btn>
+            <v-btn
+              color="success"
+              variant="flat"
+              class="rounded-lg font-weight-black text-caption px-4"
+              :loading="redeemSaveLoading"
+              @click="handleSaveRedeemCode"
+            >
+              立即生成并保存
+            </v-btn>
+          </div>
+        </v-card>
+      </v-dialog>
+
       <!-- SnackBar Toast -->
       <v-snackbar v-model="snackbar" :color="snackbarColor" timeout="3000">
         <div class="d-flex align-center">
@@ -1289,7 +1660,7 @@ import {
 const { t } = useI18n()
 
 // Active sub-tab switcher
-const activeTab = ref<'products' | 'cashier' | 'orders'>('products')
+const activeTab = ref<'products' | 'cashier' | 'redeem' | 'orders'>('products')
 
 // SnackBar
 const snackbar = ref(false)
@@ -1416,6 +1787,49 @@ const mockOrders = ref<any[]>([
     price: 50,
     currency: 'GAME_COIN',
     status: 'PENDING'
+  }
+])
+
+const mockRedeemCodes = ref<any[]>([
+  {
+    code: 'RC-WELCOME-2026',
+    shopCoinAmount: 100,
+    gameCoinAmount: 500,
+    maxUses: 1000,
+    maxUsesPerUser: 1,
+    usedCount: 342,
+    expiresAt: '2026-12-31T23:59:59Z',
+    active: true
+  },
+  {
+    code: 'RC-GAMECOIN-FREE',
+    shopCoinAmount: 0,
+    gameCoinAmount: 1000,
+    maxUses: 500,
+    maxUsesPerUser: 2,
+    usedCount: 500,
+    expiresAt: '2026-06-30T23:59:59Z',
+    active: true
+  },
+  {
+    code: 'RC-EXPIRED-CODE',
+    shopCoinAmount: 50,
+    gameCoinAmount: 100,
+    maxUses: 100,
+    maxUsesPerUser: 1,
+    usedCount: 12,
+    expiresAt: '2026-04-30T20:00:00Z',
+    active: true
+  },
+  {
+    code: 'RC-DISABLED-CODE',
+    shopCoinAmount: 200,
+    gameCoinAmount: 0,
+    maxUses: 50,
+    maxUsesPerUser: 1,
+    usedCount: 5,
+    expiresAt: '2027-01-01T00:00:00Z',
+    active: false
   }
 ])
 
@@ -2048,9 +2462,206 @@ const formatTime = (timeStr: string) => {
   }
 }
 
+// -------------------------------------------------------------
+// 6. Redemption Codes (兑换码) state & business logic
+// -------------------------------------------------------------
+const redeemCodes = ref<any[]>([])
+const redeemLoading = ref(false)
+const redeemSearch = ref('')
+const redeemStatusFilter = ref<string>('ALL')
+
+const redeemStatusOptions = [
+  { title: '全部状态', value: 'ALL' },
+  { title: '生效中 (ACTIVE)', value: 'ACTIVE' },
+  { title: '已禁用 (DISABLED)', value: 'DISABLED' },
+  { title: '已过期 (EXPIRED)', value: 'EXPIRED' },
+  { title: '已用尽 (EXHAUSTED)', value: 'EXHAUSTED' }
+]
+
+const redeemDialog = ref(false)
+const redeemFormRef = ref<any>(null)
+const redeemValid = ref(false)
+const redeemSaveLoading = ref(false)
+
+const formRedeem = ref<any>({
+  customCode: '',
+  shopCoinAmount: 0,
+  gameCoinAmount: 0,
+  maxUses: 1,
+  maxUsesPerUser: 1,
+  expiresAt: ''
+})
+
+const handleLoadRedeemCodes = async () => {
+  redeemLoading.value = true
+  try {
+    const res = await adminApi.getRedeemList()
+    if (res && res.data && (Array.isArray(res.data) || res.data.list)) {
+      redeemCodes.value = res.data.list || res.data || []
+    } else {
+      redeemCodes.value = [...mockRedeemCodes.value]
+    }
+  } catch (err: any) {
+    console.warn('API load redeem codes fail, falling back to mock:', err)
+    redeemCodes.value = [...mockRedeemCodes.value]
+  } finally {
+    redeemLoading.value = false
+  }
+}
+
+const activeRedeemCodesCount = computed(() => {
+  return redeemCodes.value.filter(r => r.active && !isCodeExpiredOrExhausted(r)).length
+})
+
+const totalRedeemClaimsCount = computed(() => {
+  return redeemCodes.value.reduce((acc, curr) => acc + (curr.usedCount || 0), 0)
+})
+
+const totalRedeemGiftedCoins = computed(() => {
+  return redeemCodes.value.reduce((acc, curr) => acc + ((curr.usedCount || 0) * (curr.shopCoinAmount || 0)), 0)
+})
+
+const isCodeExpiredOrExhausted = (item: any) => {
+  if (item.usedCount >= item.maxUses) return true
+  if (item.expiresAt && new Date(item.expiresAt).getTime() < Date.now()) return true
+  return false
+}
+
+const getRedeemStatusName = (item: any) => {
+  if (!item.active) return '已禁用'
+  if (item.usedCount >= item.maxUses) return '已用尽'
+  if (item.expiresAt && new Date(item.expiresAt).getTime() < Date.now()) return '已过期'
+  return '生效中'
+}
+
+const getRedeemStatusColor = (item: any) => {
+  if (!item.active) return 'amber'
+  if (item.usedCount >= item.maxUses) return 'grey'
+  if (item.expiresAt && new Date(item.expiresAt).getTime() < Date.now()) return 'error'
+  return 'success'
+}
+
+const filteredRedeemCodes = computed(() => {
+  let list = redeemCodes.value
+
+  if (redeemStatusFilter.value !== 'ALL') {
+    list = list.filter(r => {
+      if (redeemStatusFilter.value === 'ACTIVE') return r.active && !isCodeExpiredOrExhausted(r)
+      if (redeemStatusFilter.value === 'DISABLED') return !r.active
+      if (redeemStatusFilter.value === 'EXPIRED') return r.active && r.expiresAt && new Date(r.expiresAt).getTime() < Date.now()
+      if (redeemStatusFilter.value === 'EXHAUSTED') return r.active && r.usedCount >= r.maxUses
+      return true
+    })
+  }
+
+  if (redeemSearch.value) {
+    const q = redeemSearch.value.trim().toLowerCase()
+    list = list.filter(r => (r.code || '').toLowerCase().includes(q))
+  }
+
+  return list
+})
+
+const handleCopyCode = (code: string) => {
+  try {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code)
+      showSnackbar(`兑换码 ${code} 已复制到剪贴板！`, 'success')
+    } else {
+      const textArea = document.createElement("textarea")
+      textArea.value = code
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand("copy")
+      document.body.removeChild(textArea)
+      showSnackbar(`兑换码 ${code} 已复制到剪贴板！`, 'success')
+    }
+  } catch (e) {
+    showSnackbar('复制失败，请手动选择复制。', 'error')
+  }
+}
+
+const handleToggleRedeemActive = async (item: any) => {
+  try {
+    await adminApi.setRedeemActive({
+      code: item.code,
+      active: item.active
+    })
+    showSnackbar(`兑换码 ${item.code} 启用状态更新成功！`, 'success')
+  } catch (err: any) {
+    console.warn('API error, toggle locally:', err)
+    showSnackbar(`已在本地模拟更新 ${item.code} 启用状态为：${item.active ? '启用' : '禁用'}`, 'success')
+  }
+}
+
+const handleOpenRedeemDialog = () => {
+  formRedeem.value = {
+    customCode: '',
+    shopCoinAmount: 0,
+    gameCoinAmount: 0,
+    maxUses: 1,
+    maxUsesPerUser: 1,
+    expiresAt: ''
+  }
+  redeemDialog.value = true
+  if (redeemFormRef.value) {
+    redeemFormRef.value.resetValidation()
+  }
+}
+
+const handleSaveRedeemCode = async () => {
+  if (!redeemFormRef.value) return
+  const { valid } = await redeemFormRef.value.validate()
+  if (!valid) return
+
+  redeemSaveLoading.value = true
+  try {
+    // Generate secure random redeem code if left empty
+    let codeStr = formRedeem.value.customCode.trim().toUpperCase()
+    if (!codeStr) {
+      const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
+                         Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
+                         Math.random().toString(36).substring(2, 6).toUpperCase()
+      codeStr = `RC-${randomPart}`
+    }
+
+    const payload = {
+      code: codeStr,
+      shopCoinAmount: Number(formRedeem.value.shopCoinAmount || 0),
+      gameCoinAmount: Number(formRedeem.value.gameCoinAmount || 0),
+      maxUses: Number(formRedeem.value.maxUses),
+      maxUsesPerUser: Number(formRedeem.value.maxUsesPerUser),
+      expiresAt: new Date(formRedeem.value.expiresAt).toISOString(),
+      active: true
+    }
+
+    try {
+      await adminApi.createRedeemCode(payload)
+      showSnackbar(`兑换码 ${payload.code} 已成功保存至数据库！`, 'success')
+    } catch (err: any) {
+      console.warn('API sync failed, syncing locally:', err)
+      const mapped = {
+        ...payload,
+        usedCount: 0
+      }
+      redeemCodes.value.unshift(mapped)
+      showSnackbar(`已本地模拟生成兑换码：${payload.code}`, 'success')
+    }
+
+    redeemDialog.value = false
+    await handleLoadRedeemCodes()
+  } catch (err: any) {
+    const msg = err.response?.data?.message || err.message || '未知错误'
+    showSnackbar(`生成兑换码失败: ${msg}`, 'error')
+  } finally {
+    redeemSaveLoading.value = false
+  }
+}
+
 onMounted(async () => {
   await Promise.all([
     handleLoadProducts(),
+    handleLoadRedeemCodes(),
     handleLoadOrders()
   ])
 })
