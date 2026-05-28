@@ -2496,8 +2496,18 @@ const handleLoadRedeemCodes = async () => {
   redeemLoading.value = true
   try {
     const res = await adminApi.getRedeemList()
-    if (res && res.data && (Array.isArray(res.data) || res.data.list)) {
-      redeemCodes.value = res.data.list || res.data || []
+    if (res && res.data && (Array.isArray(res.data.codes) || Array.isArray(res.data.list) || Array.isArray(res.data))) {
+      const raw = res.data.codes || res.data.list || res.data || []
+      redeemCodes.value = raw.map((r: any) => ({
+        code: r.code,
+        shopCoinAmount: r.shopCoin !== undefined ? r.shopCoin : (r.shopCoinAmount || 0),
+        gameCoinAmount: r.gameCoin !== undefined ? r.gameCoin : (r.gameCoinAmount || 0),
+        maxUses: r.maxUses,
+        maxUsesPerUser: r.perUserMaxUses !== undefined ? r.perUserMaxUses : (r.maxUsesPerUser || 1),
+        usedCount: r.usedCount || 0,
+        expiresAt: r.expiresAt,
+        active: r.active !== undefined ? r.active : true
+      }))
     } else {
       redeemCodes.value = [...mockRedeemCodes.value]
     }
@@ -2616,36 +2626,50 @@ const handleSaveRedeemCode = async () => {
 
   redeemSaveLoading.value = true
   try {
-    // Generate secure random redeem code if left empty
-    let codeStr = formRedeem.value.customCode.trim().toUpperCase()
-    if (!codeStr) {
-      const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
-                         Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
-                         Math.random().toString(36).substring(2, 6).toUpperCase()
-      codeStr = `RC-${randomPart}`
+    // Generate minutes validity if expiration date is selected
+    let expiresInMinutes = null
+    if (formRedeem.value.expiresAt) {
+      const diffMs = new Date(formRedeem.value.expiresAt).getTime() - Date.now()
+      expiresInMinutes = Math.max(1, Math.round(diffMs / (60 * 1000)))
     }
 
     const payload = {
-      code: codeStr,
-      shopCoinAmount: Number(formRedeem.value.shopCoinAmount || 0),
-      gameCoinAmount: Number(formRedeem.value.gameCoinAmount || 0),
+      customCode: formRedeem.value.customCode.trim() || undefined,
+      shopCoin: Number(formRedeem.value.shopCoinAmount || 0),
+      gameCoin: Number(formRedeem.value.gameCoinAmount || 0),
       maxUses: Number(formRedeem.value.maxUses),
-      maxUsesPerUser: Number(formRedeem.value.maxUsesPerUser),
-      expiresAt: new Date(formRedeem.value.expiresAt).toISOString(),
-      active: true
+      perUserMaxUses: Number(formRedeem.value.maxUsesPerUser),
+      expiresInMinutes: expiresInMinutes
     }
 
     try {
-      await adminApi.createRedeemCode(payload)
-      showSnackbar(`兑换码 ${payload.code} 已成功保存至数据库！`, 'success')
+      const res = await adminApi.createRedeemCode(payload)
+      const generatedCode = res?.data?.code || payload.customCode || 'SYSTEM-GENERATED'
+      showSnackbar(`兑换码 ${generatedCode} 已成功保存至数据库！`, 'success')
     } catch (err: any) {
       console.warn('API sync failed, syncing locally:', err)
+      
+      // Fallback local random generator if API fails
+      let codeStr = formRedeem.value.customCode.trim().toUpperCase()
+      if (!codeStr) {
+        const randomPart = Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
+                           Math.random().toString(36).substring(2, 6).toUpperCase() + '-' +
+                           Math.random().toString(36).substring(2, 6).toUpperCase()
+        codeStr = `RC-${randomPart}`
+      }
+      
       const mapped = {
-        ...payload,
-        usedCount: 0
+        code: codeStr,
+        shopCoinAmount: payload.shopCoin,
+        gameCoinAmount: payload.gameCoin,
+        maxUses: payload.maxUses,
+        maxUsesPerUser: payload.perUserMaxUses,
+        usedCount: 0,
+        expiresAt: formRedeem.value.expiresAt ? new Date(formRedeem.value.expiresAt).toISOString() : null,
+        active: true
       }
       redeemCodes.value.unshift(mapped)
-      showSnackbar(`已本地模拟生成兑换码：${payload.code}`, 'success')
+      showSnackbar(`已本地模拟生成兑换码：${codeStr}`, 'success')
     }
 
     redeemDialog.value = false
