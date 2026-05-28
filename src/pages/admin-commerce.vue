@@ -1920,8 +1920,9 @@ const handleToggleActive = async (item: any) => {
     })
     showSnackbar(`商品 ${item.sku} 活跃状态已成功更新！`, 'success')
   } catch (err: any) {
-    console.warn('API error updating state, syncing local mock:', err)
-    showSnackbar(`已在本地模拟更新 ${item.sku} 活跃状态！`, 'success')
+    console.warn('API error updating state, rolling back:', err)
+    showSnackbar(`更新商品 ${item.sku} 状态失败：${err.message || '网络连接异常'}，已回滚本地更改`, 'error')
+    item.active = !item.active
   }
 }
 
@@ -1930,8 +1931,8 @@ const handleResetLimit = async (item: any) => {
     await adminApi.resetProductLimit({ sku: item.sku })
     showSnackbar(`商品 ${item.sku} 玩家限购限额重置成功！`, 'success')
   } catch (err: any) {
-    console.warn('API error resetting limit, syncing locally:', err)
-    showSnackbar(`已在本地模拟重置 ${item.sku} 限购额度！`, 'success')
+    console.warn('API error resetting limit:', err)
+    showSnackbar(`重置商品 ${item.sku} 限购额度失败：${err.message || '网络连接异常'}`, 'error')
   }
 }
 
@@ -2278,7 +2279,7 @@ const handleSaveProduct = async () => {
       } else {
         products.value.push(mappedItem)
       }
-      showSnackbar('已本地模拟保存商品配置！', 'success')
+      showSnackbar(`商品配置同步到数据库失败（已在本地内存模拟保存临时预览）：${err.message || '网络连接异常'}`, 'warning')
     }
     
     upsertDialog.value = false
@@ -2307,7 +2308,7 @@ const handleIconFileSelect = async (files: File[] | File | null) => {
   } catch (err: any) {
     console.warn('Upload API fail, mocking localized file path:', err)
     formProduct.value.displayIconPath = URL.createObjectURL(file)
-    showSnackbar('已在本地模拟生成商品图片预览！', 'success')
+    showSnackbar(`图标上传到服务器失败，已在本地生成临时预览：${err.message || '网络连接异常'}`, 'warning')
   }
 }
 
@@ -2599,8 +2600,9 @@ const handleToggleRedeemActive = async (item: any) => {
     })
     showSnackbar(`兑换码 ${item.code} 启用状态更新成功！`, 'success')
   } catch (err: any) {
-    console.warn('API error, toggle locally:', err)
-    showSnackbar(`已在本地模拟更新 ${item.code} 启用状态为：${item.active ? '启用' : '禁用'}`, 'success')
+    console.warn('API error toggling redeem active status, rolling back:', err)
+    showSnackbar(`更新兑换码 ${item.code} 状态失败：${err.message || '网络连接异常'}，已回滚本地更改`, 'error')
+    item.active = !item.active
   }
 }
 
@@ -2669,7 +2671,7 @@ const handleSaveRedeemCode = async () => {
         active: true
       }
       redeemCodes.value.unshift(mapped)
-      showSnackbar(`已本地模拟生成兑换码：${codeStr}`, 'success')
+      showSnackbar(`兑换码保存到服务器失败（已在本地模拟临时生成：${codeStr}）：${err.message || '网络连接异常'}`, 'warning')
     }
 
     redeemDialog.value = false

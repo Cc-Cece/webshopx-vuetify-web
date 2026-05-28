@@ -1116,7 +1116,7 @@ const handleForceUnlist = async () => {
       if (idx !== -1) {
         listings.value[idx].status = 'CANCELLED'
       }
-      showSnackbar(`已本地模拟强制下架挂单 #${targetUnlistListing.value.id}！`, 'success')
+      showSnackbar(`强制下架失败（已在本地模拟下架，未保存到服务器）：${err.message || '网络连接异常'}`, 'warning')
     }
     unlistDialog.value = false
     await handleLoadListings()
@@ -1301,7 +1301,7 @@ const handleSaveConfigs = async () => {
       console.warn('API error saving config, saving to local mock:', err)
       mockTagsConfig.value = tagsPayload.config
       mockLimitationsConfig.value = limitPayload.config
-      showSnackbar('已本地模拟保存交易限制与标签字典规则！', 'success')
+      showSnackbar(`保存限制与字典配置失败（已在本地内存模拟保存临时生效）：${err.message || '网络连接异常'}`, 'warning')
     }
 
     await handleLoadConfigs() // Reload
@@ -1398,7 +1398,7 @@ const handleSaveOverride = async () => {
       } else {
         overrides.value.push(payload)
       }
-      showSnackbar('已本地模拟保存材质对照映射！', 'success')
+      showSnackbar(`保存对照译名失败（已在本地内存模拟保存临时生效）：${err.message || '网络连接异常'}`, 'warning')
     }
     handleClearOverrideEditor()
     await handleLoadOverrides()
@@ -1430,7 +1430,7 @@ const handleDeleteOverride = async () => {
     } catch (err: any) {
       console.warn('API error deleting override, updating local mock:', err)
       overrides.value = overrides.value.filter(item => item.materialKey !== targetDeleteOverride.value.materialKey)
-      showSnackbar(`已本地模拟清除材质 ${targetDeleteOverride.value.materialKey} 覆盖设定！`, 'success')
+      showSnackbar(`清除材质覆盖失败（已在本地模拟清除）：${err.message || '网络连接异常'}`, 'warning')
     }
     deleteOverrideDialog.value = false
     await handleLoadOverrides()
@@ -1635,7 +1635,7 @@ const handleApplyCropAndUpload = async () => {
       } catch (err: any) {
         console.warn('Upload API fail, mocking localized file path:', err)
         formOverride.value.iconUrl = URL.createObjectURL(croppedFile)
-        showSnackbar('已在本地模拟生成裁剪图标预览！', 'success')
+        showSnackbar(`材质对照图标上传失败，已在本地生成临时预览：${err.message || '网络连接异常'}`, 'warning')
         cropDialog.value = false
       } finally {
         cropUploading.value = false

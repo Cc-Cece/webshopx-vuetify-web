@@ -2,9 +2,9 @@ import axios from "axios";
 
 const getInitialBaseUrl = (): string => {
   if (typeof window !== "undefined") {
-    return window.localStorage.getItem("webshopx_api_base_url") || "";
+    return window.localStorage.getItem("webshopx_api_base_url") || "http://localhost:8819";
   }
-  return "";
+  return "http://localhost:8819";
 };
 
 export const apiClient = axios.create({

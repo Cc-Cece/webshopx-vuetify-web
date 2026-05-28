@@ -955,7 +955,7 @@ const handleLookupUser = async () => {
       )
       if (matchedMock) {
         await loadUserIntoEditor(matchedMock)
-        showSnackbar(`[本地模拟] 已成功调取玩家 ${matchedMock.username} 账户透视面板！`, 'success')
+        showSnackbar(`[本地模拟库] 已调取玩家 ${matchedMock.username} 账户透视面板！`, 'info')
       } else {
         showSnackbar('未找到该玩家账号，请检查输入。', 'error')
       }
@@ -968,7 +968,7 @@ const handleLookupUser = async () => {
     )
     if (matchedMock) {
       await loadUserIntoEditor(matchedMock)
-      showSnackbar(`[本地模拟] 已成功调取玩家 ${matchedMock.username} 账户透视面板！`, 'success')
+      showSnackbar(`获取玩家数据失败，已从本地模拟库调取 ${matchedMock.username} 数据预览：${err.message || '网络连接异常'}`, 'warning')
     } else {
       showSnackbar(`查询失败：${err.message || '玩家未找到'}`, 'error')
     }
@@ -993,7 +993,7 @@ const handleResetPassword = async () => {
       showSnackbar(t('admin.uiText.autoJs.k0019'), 'success')
     } catch (err: any) {
       console.warn('API reset password fail, using mock fallback:', err)
-      showSnackbar(`[本地模拟] 成功重置玩家 ${selectedUser.value.username} 的密码！`, 'success')
+      showSnackbar(`重置密码请求失败（已在本地模拟成功，数据未持久化）：${err.message || '网络连接异常'}`, 'warning')
     }
     resetPwdDialog.value = false
     newPassword.value = ''
@@ -1019,7 +1019,7 @@ const handleUnbind = async () => {
       showSnackbar(t('admin.uiText.autoJs.k0020'), 'success')
     } catch (err: any) {
       console.warn('API unbind fail, using mock fallback:', err)
-      showSnackbar(`[本地模拟] 成功解绑玩家 ${selectedUser.value.username} 的 Minecraft UUID！`, 'success')
+      showSnackbar(`解绑UUID失败（已在本地模拟成功，数据未持久化）：${err.message || '网络连接异常'}`, 'warning')
     }
     unbindDialog.value = false
     selectedUser.value.uuid = '' // Clear local
@@ -1049,7 +1049,7 @@ const handleForceLogout = async () => {
       showSnackbar(t('admin.uiText.autoJs.k0021'), 'success')
     } catch (err: any) {
       console.warn('API logout fail, using mock fallback:', err)
-      showSnackbar(`[本地模拟] 已成功强踢玩家 ${selectedUser.value.username} 下线！`, 'success')
+      showSnackbar(`强踢下线失败（已在本地模拟成功）：${err.message || '网络连接异常'}`, 'warning')
     }
     logoutDialog.value = false
     selectedUser.value.online = false // Set offline
@@ -1099,7 +1099,7 @@ const handleAdjustWallet = async () => {
       } else {
         gc += Number(adjustAmount.value)
       }
-      showSnackbar(`[本地模拟] 成功调账！${adjustCurrency.value === 'SHOP_COIN' ? 'SC' : 'GC'} 变动了 ${adjustAmount.value}。`, 'success')
+      showSnackbar(`调账失败（已在本地模拟变动，未持久化）：${err.message || '网络连接异常'}`, 'warning')
     }
     
     selectedUser.value.shopCoin = sc
@@ -1145,7 +1145,7 @@ const handleSaveVisualPermissions = async () => {
           ...visualPermission.value
         }
       }
-      showSnackbar(`[本地模拟] 特权策略覆盖保存成功！`, 'success')
+      showSnackbar(`特权保存失败（已在本地模拟保存，刷新后失效）：${err.message || '网络连接异常'}`, 'warning')
     }
   } catch (err: any) {
     const msg = err.response?.data?.message || err.message || '未知错误'
@@ -1289,7 +1289,7 @@ const handleSaveAdmin = async () => {
       } else {
         mockAdmins.value.push(payload)
       }
-      showSnackbar('[本地模拟] 管理员权限配置保存成功！', 'success')
+      showSnackbar(`保存管理员失败（已在本地内存模拟保存临时更改）：${err.message || '网络连接异常'}`, 'warning')
     }
     handleClearAdminEditor()
     await handleLoadAdmins()
@@ -1303,20 +1303,15 @@ const handleSaveAdmin = async () => {
 
 const handleToggleAdminActive = async (item: any) => {
   try {
-    try {
-      await adminApi.setAdminUserActive({
-        username: item.username,
-        active: item.active
-      })
-      showSnackbar(`管理员 ${item.username} 活性状态已更新！`, 'success')
-    } catch (err: any) {
-      console.warn('API error setting active state, simulating in local mock:', err)
-      showSnackbar(`[本地模拟] 已成功更新管理员 ${item.username} 的活性状态为 ${item.active ? '激活' : '禁用'}！`, 'success')
-    }
+    await adminApi.setAdminUserActive({
+      username: item.username,
+      active: item.active
+    })
+    showSnackbar(`管理员 ${item.username} 活性状态已更新！`, 'success')
   } catch (err: any) {
+    console.warn('API error setting active state, rolling back:', err)
+    showSnackbar(`更新管理员 ${item.username} 状态失败：${err.message || '网络连接异常'}，已回滚本地更改`, 'error')
     item.active = !item.active // rollback
-    const msg = err.response?.data?.message || err.message || '未知错误'
-    showSnackbar(`管理员激活状态修改失败：${msg}`, 'error')
   }
 }
 
