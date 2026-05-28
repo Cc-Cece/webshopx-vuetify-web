@@ -257,7 +257,7 @@
     </v-dialog>
 
     <!-- Buy dialog -->
-    <v-dialog v-model="buyDialog" max-width="480">
+    <v-dialog v-model="buyDialog" max-width="520">
       <v-card v-if="selectedProduct" class="dialog-card">
         <v-card-title class="d-flex align-center flex-shrink-0">
           <v-icon color="primary" class="mr-2">mdi-cart-check</v-icon>
@@ -279,33 +279,92 @@
 
           <v-row align="center" dense class="mb-4">
             <v-col cols="12" sm="8">
-              <v-slider v-model="buyQuantity" label="购买数量" min="1" :max="selectedProduct.stock" step="1" thumb-label color="primary" prepend-icon="mdi-counter" hide-details @end="normalizeBuyQty"></v-slider>
+              <v-slider
+                v-model="buyQuantity"
+                label="购买数量"
+                min="1"
+                :max="selectedProduct.stock"
+                step="1"
+                thumb-label
+                color="primary"
+                track-color="surface-variant"
+                prepend-icon="mdi-counter"
+                hide-details
+                @end="normalizeBuyQty"
+              ></v-slider>
             </v-col>
             <v-col cols="12" sm="4">
-              <v-text-field v-model.number="buyQuantity" label="数量" type="number" min="1" :max="selectedProduct.stock" variant="outlined" density="comfortable" hide-details="auto" @blur="normalizeBuyQty"></v-text-field>
+              <v-text-field
+                v-model.number="buyQuantity"
+                label="数量"
+                type="number"
+                min="1"
+                :max="selectedProduct.stock"
+                variant="outlined"
+                density="comfortable"
+                hide-details="auto"
+                @blur="normalizeBuyQty"
+              ></v-text-field>
             </v-col>
           </v-row>
 
+          <v-select
+            v-model="claimMethod"
+            :items="claimMethodOptions"
+            item-title="title"
+            item-value="value"
+            label="领取方式"
+            prepend-inner-icon="mdi-truck-delivery-outline"
+            variant="outlined"
+            density="comfortable"
+            hide-details
+            class="mb-2"
+          ></v-select>
+
           <v-table density="comfortable" class="border rounded-lg mb-4">
             <tbody>
-              <tr><td>单价</td><td class="text-right">{{ formatMoney(selectedProduct.price, selectedProduct.currency) }}</td></tr>
-              <tr><td class="font-weight-bold">总价</td><td class="text-right font-weight-bold">{{ formatMoney(buyTotal, selectedProduct.currency) }}</td></tr>
-              <tr><td>当前余额</td><td class="text-right">{{ formatMoney(currentBalance, selectedProduct.currency) }}</td></tr>
+              <tr>
+                <td>单价</td>
+                <td class="text-right">{{ formatMoney(selectedProduct.price, selectedProduct.currency) }}</td>
+              </tr>
+              <tr>
+                <td class="font-weight-bold">总价</td>
+                <td class="text-right font-weight-bold">{{ formatMoney(buyTotal, selectedProduct.currency) }}</td>
+              </tr>
+              <tr>
+                <td>税额</td>
+                <td class="text-right">{{ formatMoney(taxAmount, selectedProduct.currency) }}</td>
+              </tr>
+              <tr>
+                <td>当前余额</td>
+                <td class="text-right">{{ formatMoney(currentBalance, selectedProduct.currency) }}</td>
+              </tr>
               <tr>
                 <td>结算后余额</td>
-                <td class="text-right font-weight-bold" :class="afterBuyBalance < 0 ? 'text-error' : 'text-success'">{{ formatMoney(afterBuyBalance, selectedProduct.currency) }}</td>
+                <td class="text-right font-weight-bold" :class="afterBuyBalance < 0 ? 'text-error' : 'text-success'">
+                  {{ formatMoney(afterBuyBalance, selectedProduct.currency) }}
+                </td>
               </tr>
             </tbody>
           </v-table>
 
-          <v-alert v-if="afterBuyBalance < 0" type="error" variant="tonal" density="comfortable" text="钱包余额不足，无法完成购买。"></v-alert>
-          <v-alert v-else type="success" variant="tonal" density="comfortable" text="余额充足，确认后将提交购买订单。"></v-alert>
+          <v-alert v-if="afterBuyBalance < 0" type="error" variant="tonal" density="comfortable" text="钱包余额不足，无法完成本次购买。"></v-alert>
+          <v-alert v-else type="success" variant="tonal" density="comfortable" text="余额充足，确认后将创建订单并扣除对应金额。"></v-alert>
         </v-card-text>
         <v-divider></v-divider>
         <v-card-actions class="px-6 py-4 flex-shrink-0">
           <v-btn variant="text" @click="buyDialog = false">取消</v-btn>
           <v-spacer></v-spacer>
-          <v-btn color="primary" variant="flat" prepend-icon="mdi-check" :loading="submitting" :disabled="afterBuyBalance < 0 || submitting" @click="confirmBuy">确认购买</v-btn>
+          <v-btn
+            color="primary"
+            variant="flat"
+            prepend-icon="mdi-check"
+            :loading="submitting"
+            :disabled="!canConfirmBuy"
+            @click="confirmBuy"
+          >
+            确认购买
+          </v-btn>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -362,6 +421,14 @@ const selectedProduct = ref<MarketProduct | null>(null)
 const detailDialog = ref(false)
 const buyDialog = ref(false)
 const buyQuantity = ref(1)
+const claimMethod = ref<'INSTANT' | 'MANUAL'>('INSTANT')
+const taxRate = ref(0.02)
+const feeRate = ref(0.05)
+
+const claimMethodOptions = [
+  { title: '即时到账', value: 'INSTANT' },
+  { title: '手动领取', value: 'MANUAL' },
+]
 
 const sortOptions = [
   { title: '默认推荐', value: 'POPULAR' },
@@ -415,7 +482,11 @@ const currentBalance = computed(() => {
 })
 
 const buyTotal = computed(() => (selectedProduct.value?.price ?? 0) * Math.max(1, buyQuantity.value))
-const afterBuyBalance = computed(() => currentBalance.value - buyTotal.value)
+const taxAmount = computed(() => Math.max(0, Math.floor(buyTotal.value * taxRate.value)))
+const afterBuyBalance = computed(() => currentBalance.value - buyTotal.value - taxAmount.value)
+const canConfirmBuy = computed(() =>
+  Boolean(selectedProduct.value && afterBuyBalance.value >= 0 && !submitting.value)
+)
 
 function currencyMeta(currency: CurrencyCode) {
   return currency === 'SHOP_COIN'
@@ -474,6 +545,7 @@ function openDetail(product: MarketProduct) {
 function openBuyDialog(product: MarketProduct) {
   selectedProduct.value = product
   buyQuantity.value = 1
+  claimMethod.value = 'INSTANT'
   detailDialog.value = false
   buyDialog.value = true
 }
@@ -519,7 +591,9 @@ async function confirmBuy() {
   try {
     await shopApi.buyMarketListing({
       listingId: selectedProduct.value.id,
+      buyQuantity: buyQuantity.value,
       quantity: buyQuantity.value,
+      deliveryMode: claimMethod.value === 'INSTANT' ? 'IMMEDIATE' : 'CLAIM',
     })
     buyDialog.value = false
     showSnackbar(`已购买 ${selectedProduct.value.title} x${buyQuantity.value}`)
@@ -531,7 +605,18 @@ async function confirmBuy() {
   }
 }
 
-onMounted(loadListings)
+onMounted(async () => {
+  await loadListings()
+  try {
+    const policyRes = await shopApi.getOrdersPolicy()
+    if (policyRes.data) {
+      taxRate.value = (policyRes.data.marketTaxPercent ?? 2) / 100
+      feeRate.value = (policyRes.data.marketFeePercent ?? 5) / 100
+    }
+  } catch (err) {
+    console.error('Failed to load orders policy:', err)
+  }
+})
 </script>
 
 <style scoped>
