@@ -517,6 +517,71 @@
             </v-radio>
           </v-radio-group>
         </div>
+
+        <v-divider class="mt-4 mb-3"></v-divider>
+
+        <!-- API 基础连接设置区 -->
+        <div class="mb-2">
+          <div class="d-flex mb-3 w-100">
+            <div class="flex-grow-1 flex-shrink-1">
+              <v-label class="mb-1 font-weight-medium text-body-1" style="opacity: 0.9;">API 基础连接设置</v-label>
+              <v-messages messages="查看并管理当前客户端对接 of 后端 API 接口路径。" active style="opacity: 0.6;" />
+            </div>
+          </div>
+          
+          <v-text-field
+            v-model="inputBaseUrl"
+            label="API 基础路径"
+            placeholder="http://127.0.0.1:8819/api"
+            variant="outlined"
+            density="comfortable"
+            rounded="lg"
+            color="primary"
+            prepend-inner-icon="mdi-web"
+            class="mb-3"
+            :disabled="testingConnection"
+            hide-details
+          ></v-text-field>
+
+          <v-row dense>
+            <v-col cols="8">
+              <v-btn
+                color="primary"
+                variant="flat"
+                block
+                rounded="lg"
+                class="font-weight-bold text-caption text-none"
+                height="38"
+                prepend-icon="mdi-content-save-outline"
+                :loading="testingConnection"
+                :disabled="testingConnection"
+                @click="saveBaseUrl"
+              >
+                测试并保存
+              </v-btn>
+            </v-col>
+            <v-col cols="4">
+              <v-btn
+                color="error"
+                variant="tonal"
+                block
+                rounded="lg"
+                class="font-weight-bold text-caption text-none"
+                height="38"
+                prepend-icon="mdi-trash-can-outline"
+                :disabled="testingConnection"
+                @click="deleteBaseUrl"
+              >
+                清除
+              </v-btn>
+            </v-col>
+          </v-row>
+
+          <p class="text-xxs text-medium-emphasis mt-3 pl-1 leading-normal d-flex align-start">
+            <v-icon size="12" color="medium-emphasis" class="mr-1 mt-0_5">mdi-information-outline</v-icon>
+            <span>修改或清除 API 地址后，系统将会自动退出当前账号并重载页面以重新初始化服务连接。</span>
+          </p>
+        </div>
       </div>
     </v-navigation-drawer>
 
@@ -569,6 +634,25 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
+
+    <!-- 全局 SnackBar 提示通知 -->
+    <v-snackbar
+      v-model="appSnackbar"
+      :color="appSnackbarColor"
+      timeout="3000"
+      rounded="lg"
+      elevation="4"
+    >
+      <div class="d-flex align-center font-weight-bold">
+        <v-icon class="mr-2" size="20">
+          {{ appSnackbarColor === 'success' ? 'mdi-check-circle-outline' : 'mdi-alert-circle-outline' }}
+        </v-icon>
+        <span>{{ appSnackbarText }}</span>
+      </div>
+      <template #actions>
+        <v-btn variant="text" icon="mdi-close" @click="appSnackbar = false"></v-btn>
+      </template>
+    </v-snackbar>
   </v-app>
 </template>
 
@@ -613,17 +697,33 @@
   const settingsDrawer = ref(false)
   const notifMenuOpen = ref(false)
   const showBaseUrlDialog = ref(false)
-  const inputBaseUrl = ref('')
+  const inputBaseUrl = ref(localStorage.getItem('webshopx_api_base_url') || '')
   const testingConnection = ref(false)
   const testErrorMsg = ref('')
 
+  // 全局 SnackBar 提示状态
+  const appSnackbar = ref(false)
+  const appSnackbarText = ref('')
+  const appSnackbarColor = ref('success')
+
+  const showAppSnackbar = (text: string, color: string = 'success') => {
+    appSnackbarText.value = text
+    appSnackbarColor.value = color
+    appSnackbar.value = true
+  }
+
   const saveBaseUrl = async () => {
-    if (!inputBaseUrl.value) return
+    if (!inputBaseUrl.value.trim()) {
+      testErrorMsg.value = 'API 路径不能为空'
+      showAppSnackbar('API 路径不能为空', 'error')
+      return
+    }
     
     const oldUrl = localStorage.getItem('webshopx_api_base_url') || ''
     const cleanUrl = inputBaseUrl.value.trim().replace(/\/$/, '')
     if (oldUrl === cleanUrl) {
       testErrorMsg.value = 'API 基础路径与原配置一致，未发生更改。'
+      showAppSnackbar('API 路径与原配置一致，未发生更改。', 'warning')
       return
     }
 
@@ -633,18 +733,34 @@
       const testRes = await axios.get(`${cleanUrl}/meta/currency`, { timeout: 5000 })
       if (testRes.status >= 200 && testRes.status < 400) {
         localStorage.setItem('webshopx_api_base_url', cleanUrl)
+        showAppSnackbar('连接测试成功！已保存配置并退出账号，页面即将重载...', 'success')
         if (isLoggedIn.value) {
           await logoutUser()
         }
-        window.location.reload()
+        setTimeout(() => {
+          window.location.reload()
+        }, 1200)
       } else {
         testErrorMsg.value = '连接测试失败，服务响应异常。'
+        showAppSnackbar('API 连接测试失败，服务响应异常。', 'error')
       }
     } catch (err: any) {
       testErrorMsg.value = '连接测试失败，请检查服务是否开启或地址是否正确。'
+      showAppSnackbar('API 连接测试失败，请检查服务是否开启或地址是否正确。', 'error')
     } finally {
       testingConnection.value = false
     }
+  }
+
+  const deleteBaseUrl = async () => {
+    localStorage.removeItem('webshopx_api_base_url')
+    showAppSnackbar('已成功清除 API 配置并退出当前账号，页面即将重载...', 'success')
+    if (isLoggedIn.value) {
+      await logoutUser()
+    }
+    setTimeout(() => {
+      window.location.reload()
+    }, 1200)
   }
 
   // 铃铛菜单打开时拉取最新通知（含已读标记）

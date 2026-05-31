@@ -130,78 +130,6 @@
         </v-card>
       </v-col>
     </v-row>
-
-    <!-- API Connection Management Card for Login Page -->
-    <v-row class="justify-center mt-4">
-      <v-col cols="12" md="12" lg="12">
-        <v-card elevation="0" variant="outlined" class="rounded-xl pa-6 glass-card hover-lift">
-          <v-card-item class="px-0 pt-0">
-            <template #title>
-              <div class="text-h6 font-weight-bold d-flex align-center">
-                <v-icon color="primary" class="mr-2" size="22">mdi-link-variant</v-icon>
-                <span>API 基础连接设置</span>
-              </div>
-            </template>
-            <template #subtitle>
-              <span class="text-caption text-medium-emphasis">
-                查看并管理当前客户端对接的后端 API 接口路径。
-              </span>
-            </template>
-          </v-card-item>
-
-          <v-divider class="my-3"></v-divider>
-
-          <v-card-text class="px-0 py-2">
-            <v-row class="align-center">
-              <v-col cols="12" sm="8" class="py-1">
-                <v-text-field
-                  v-model="apiBaseUrlInput"
-                  label="API 基础路径"
-                  placeholder="未配置"
-                  variant="outlined"
-                  density="comfortable"
-                  rounded="lg"
-                  color="primary"
-                  hide-details
-                  prepend-inner-icon="mdi-web"
-                  :disabled="testingConnection"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12" sm="4" class="py-1 d-flex gap-2">
-                <v-btn
-                  color="primary"
-                  variant="flat"
-                  class="flex-grow-1 font-weight-bold text-none"
-                  height="48"
-                  rounded="lg"
-                  prepend-icon="mdi-content-save-outline"
-                  :loading="testingConnection"
-                  :disabled="testingConnection"
-                  @click="updateBaseUrl"
-                >
-                  保存
-                </v-btn>
-                <v-btn
-                  color="error"
-                  variant="tonal"
-                  class="font-weight-bold text-none"
-                  height="48"
-                  rounded="lg"
-                  icon="mdi-trash-can-outline"
-                  title="清除配置"
-                  :disabled="testingConnection"
-                  @click="deleteBaseUrl"
-                ></v-btn>
-              </v-col>
-            </v-row>
-            <p class="text-caption text-medium-emphasis mt-2 pl-1 d-flex align-center">
-              <v-icon size="14" color="medium-emphasis" class="mr-1">mdi-information-outline</v-icon>
-              修改或清除 API 地址后，系统将会自动刷新页面以重新初始化服务连接。
-            </p>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
   </template>
 
   <!-- Authenticated View (Profile details, Wallet overview, Redeem, Exchange) -->
@@ -479,74 +407,6 @@
           </v-card-text>
         </v-card>
 
-        <!-- 4. API Connection Management Card -->
-        <v-card elevation="0" variant="outlined" class="rounded-xl pa-6 glass-card mb-1 hover-lift">
-          <v-card-item class="px-0 pt-0">
-            <template #title>
-              <div class="text-h6 font-weight-bold d-flex align-center">
-                <v-icon color="primary" class="mr-2" size="22">mdi-link-variant</v-icon>
-                <span>API 基础连接设置</span>
-              </div>
-            </template>
-            <template #subtitle>
-              <span class="text-caption text-medium-emphasis">
-                查看并管理当前客户端对接的后端 API 接口路径。
-              </span>
-            </template>
-          </v-card-item>
-
-          <v-divider class="my-3"></v-divider>
-
-          <v-card-text class="px-0 py-2">
-            <v-row class="align-center">
-              <v-col cols="12" sm="8" class="py-1">
-                <v-text-field
-                  v-model="apiBaseUrlInput"
-                  label="API 基础路径"
-                  placeholder="未配置"
-                  variant="outlined"
-                  density="comfortable"
-                  rounded="lg"
-                  color="primary"
-                  hide-details
-                  prepend-inner-icon="mdi-web"
-                  :disabled="testingConnection"
-                ></v-text-field>
-              </v-col>
-              <v-col cols="12" sm="4" class="py-1 d-flex gap-2">
-                <v-btn
-                  color="primary"
-                  variant="flat"
-                  class="flex-grow-1 font-weight-bold text-none"
-                  height="48"
-                  rounded="lg"
-                  prepend-icon="mdi-content-save-outline"
-                  :loading="testingConnection"
-                  :disabled="testingConnection"
-                  @click="updateBaseUrl"
-                >
-                  保存
-                </v-btn>
-                <v-btn
-                  color="error"
-                  variant="tonal"
-                  class="font-weight-bold text-none"
-                  height="48"
-                  rounded="lg"
-                  icon="mdi-trash-can-outline"
-                  title="清除配置"
-                  :disabled="testingConnection"
-                  @click="deleteBaseUrl"
-                ></v-btn>
-              </v-col>
-            </v-row>
-            <p class="text-caption text-medium-emphasis mt-2 pl-1 d-flex align-center">
-              <v-icon size="14" color="medium-emphasis" class="mr-1">mdi-information-outline</v-icon>
-              修改或清除 API 地址后，系统将会自动刷新页面以重新初始化服务连接。
-            </p>
-          </v-card-text>
-        </v-card>
-
       </v-col>
     </v-row>
   </template>
@@ -577,7 +437,6 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { apiClient } from '@/api/client'
-import axios from 'axios'
 import {
   isLoggedIn,
   currentUser,
@@ -771,55 +630,6 @@ const copyUuid = () => {
     navigator.clipboard.writeText(currentUser.value.uuid)
     showSnackbar('UUID 已成功复制到剪贴板！', 'success')
   }
-}
-
-const apiBaseUrlInput = ref(localStorage.getItem('webshopx_api_base_url') || '')
-const testingConnection = ref(false)
-
-const updateBaseUrl = async () => {
-  if (!apiBaseUrlInput.value.trim()) {
-    showSnackbar('API 路径不能为空，若想清除配置请点击删除按钮。', 'error')
-    return
-  }
-  
-  const oldUrl = localStorage.getItem('webshopx_api_base_url') || ''
-  const cleanUrl = apiBaseUrlInput.value.trim().replace(/\/$/, '')
-  if (oldUrl === cleanUrl) {
-    showSnackbar('API 基础路径与原配置一致，未发生更改。', 'warning')
-    return
-  }
-  
-  testingConnection.value = true
-  try {
-    const testRes = await axios.get(`${cleanUrl}/meta/currency`, { timeout: 5000 })
-    if (testRes.status >= 200 && testRes.status < 400) {
-      localStorage.setItem('webshopx_api_base_url', cleanUrl)
-      showSnackbar('连接测试成功！已保存并退出当前账号，页面即将重载...', 'success')
-      if (isLoggedIn.value) {
-        await logoutUser()
-      }
-      setTimeout(() => {
-        window.location.reload()
-      }, 1000)
-    } else {
-      showSnackbar('API 连接测试失败，服务响应异常。', 'error')
-    }
-  } catch (err) {
-    showSnackbar('API 连接测试失败，请检查服务是否开启或地址是否正确。', 'error')
-  } finally {
-    testingConnection.value = false
-  }
-}
-
-const deleteBaseUrl = async () => {
-  localStorage.removeItem('webshopx_api_base_url')
-  showSnackbar('已成功清除 API 配置并退出当前账号，页面即将重载...', 'success')
-  if (isLoggedIn.value) {
-    await logoutUser()
-  }
-  setTimeout(() => {
-    window.location.reload()
-  }, 1000)
 }
 
 const showSnackbar = (text: string, color: string) => {
