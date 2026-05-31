@@ -4,7 +4,7 @@
  * Manual routes for ./src/pages/*.vue
  */
 
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHashHistory } from 'vue-router'
 import Account from '@/pages/account.vue'
 import Shop from '@/pages/shop.vue'
 import Market from '@/pages/market.vue'
@@ -22,7 +22,7 @@ import AdminUsers from '@/pages/admin-users.vue'
 import AdminSystem from '@/pages/admin-system.vue'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes: [
     {
       path: '/',
