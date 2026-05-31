@@ -1071,5 +1071,82 @@
   .settings-switch .v-label {
     margin-bottom: 0;
   }
+
+  /* 阻止表格换行，实现纯粹的横向滚动（完美适配中等屏幕防止文字竖排） */
+  .v-table th,
+  .v-table td {
+    white-space: nowrap !important;
+  }
+
+  /* 极致奢华全局自适应玻璃卡片，完全适配所有主题与深浅色调，杜绝硬编码颜色 */
+  .glass-card {
+    background: rgba(var(--v-theme-surface), 0.65) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(var(--v-theme-on-surface), 0.08) !important;
+    transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+
+  /* 表单/区域自适应柔和浅底，杜绝写死 bg-white 或 bg-grey-lighten */
+  .bg-light-soft {
+    background-color: rgba(var(--v-theme-on-surface), 0.03) !important;
+  }
+
+  /* 表格页眉自适应高亮 */
+  .bg-table-header {
+    background-color: rgba(var(--v-theme-on-surface), 0.04) !important;
+  }
+
+  /* 表格行悬停柔和交互 */
+  .hover-bg-row {
+    transition: all 0.2s ease;
+  }
+  .hover-bg-row:hover {
+    background-color: rgba(var(--v-theme-on-surface), 0.04) !important;
+  }
+
+  /* 卡片悬停微浮与边缘极光发散 */
+  .hover-lift:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(var(--v-theme-on-surface), 0.06), 
+                0 0 1px 1px rgba(var(--v-theme-primary), 0.15) !important;
+  }
+
+  /* 顶层模块高亮卡片背景 */
+  .header-card {
+    background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.08) 0%, rgba(var(--v-theme-surface), 0.95) 100%) !important;
+    border: 1px solid rgba(var(--v-theme-success), 0.15) !important;
+  }
+
+  /* 全局微小字号 */
+  .text-xxs {
+    font-size: 0.7rem !important;
+  }
+
+  /* 全局等宽字体 */
+  .font-mono {
+    font-family: monospace !important;
+  }
+
+  /* 全局虚线边框 */
+  .border-dashed {
+    border: 1px dashed rgba(var(--v-theme-on-surface), 0.15) !important;
+  }
+
+  /* 全局渐显动画 */
+  .animate-fade-in {
+    animation: fadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 </style>
 

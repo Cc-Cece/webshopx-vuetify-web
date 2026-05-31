@@ -2,7 +2,7 @@
   <admin-gate>
     <v-container fluid class="pa-4 pa-sm-6 animate-fade-in" style="max-width: 1500px; min-height: 100vh;">
       <!-- Header Banner -->
-      <v-card elevation="0" class="rounded-xl pa-4 mb-6 header-card d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center ga-4">
+      <v-card elevation="0" class="rounded-xl pa-4 mb-6 header-card border-t-4 border-success d-flex flex-column flex-sm-row justify-space-between align-start align-sm-center ga-4">
         <div>
           <h1 class="text-h5 font-weight-black text-success d-flex align-center">
             <v-icon class="mr-2" size="28">mdi-store-cog-outline</v-icon>
@@ -38,9 +38,9 @@
       <v-window v-model="activeTab">
         <!-- Products Management Tab -->
         <v-window-item value="products">
-          <v-card elevation="0" variant="outlined" class="rounded-xl overflow-hidden bg-white border border-success-light">
+          <v-card elevation="0" variant="outlined" class="rounded-xl overflow-hidden glass-card border-s-4 border-success">
             <!-- Table Toolbar -->
-            <div class="pa-4 border-b d-flex flex-column flex-sm-row justify-space-between align-sm-center ga-3 bg-grey-lighten-5">
+            <div class="pa-4 border-b d-flex flex-column flex-sm-row justify-space-between align-sm-center ga-3 bg-light-soft">
               <div class="d-flex align-center flex-wrap ga-3">
                 <v-text-field
                   v-model="productSearch"
@@ -53,7 +53,6 @@
                   clearable
                   color="success"
                   style="max-width: 320px; width: 100%;"
-                  class="bg-white"
                 ></v-text-field>
 
                 <v-select
@@ -68,7 +67,6 @@
                   rounded="lg"
                   color="success"
                   style="width: 180px;"
-                  class="bg-white"
                 ></v-select>
               </div>
               
@@ -96,89 +94,186 @@
             <!-- Table or Skeleton -->
             <v-skeleton-loader v-if="productsLoading && products.length === 0" type="table-row-divider@8" class="bg-transparent"></v-skeleton-loader>
 
-            <div v-else class="table-container overflow-x-auto">
-              <v-table class="bg-transparent text-slate-800">
-                <thead>
-                  <tr class="bg-table-header text-slate-800">
-                    <th class="font-weight-black text-caption text-center width-60">图标</th>
-                    <th class="font-weight-black text-caption">SKU</th>
-                    <th class="font-weight-black text-caption">商品标题</th>
-                    <th class="font-weight-black text-caption">商品类型</th>
-                    <th class="font-weight-black text-caption text-right">交易单价</th>
-                    <th class="font-weight-black text-caption text-center">状态</th>
-                    <th class="font-weight-black text-caption text-center">限购/库存</th>
-                    <th class="font-weight-black text-caption text-center">操作</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in filteredProducts" :key="item.sku" class="hover-bg-row text-caption">
-                    <td class="text-center">
-                      <v-avatar size="36" rounded="lg" color="grey-lighten-4" class="border">
-                        <McIcon
-                          :material="item.displayMaterial || item.itemMaterial"
-                          :icon-url="item.displayIconPath"
-                          :size="26"
+            <template v-else>
+              <!-- 1. 电脑端表格视图：在 md 及以上中大屏幕显示 -->
+              <div class="d-none d-md-block table-container overflow-x-auto">
+                <v-table class="bg-transparent text-high-emphasis">
+                  <thead>
+                    <tr class="bg-table-header text-high-emphasis">
+                      <th class="font-weight-black text-caption text-center" style="width: 60px;">图标</th>
+                      <th class="font-weight-black text-caption">SKU</th>
+                      <th class="font-weight-black text-caption">商品标题</th>
+                      <th class="font-weight-black text-caption">商品类型</th>
+                      <th class="font-weight-black text-caption text-right">交易单价</th>
+                      <th class="font-weight-black text-caption text-center">状态</th>
+                      <th class="font-weight-black text-caption text-center">限购/库存</th>
+                      <th class="font-weight-black text-caption text-center">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in filteredProducts" :key="item.sku" class="hover-bg-row text-caption">
+                      <td class="text-center">
+                        <v-avatar size="36" rounded="lg" color="grey-lighten-4" class="border">
+                          <McIcon
+                            :material="item.displayMaterial || item.itemMaterial"
+                            :icon-url="item.displayIconPath"
+                            :size="26"
+                            color="success"
+                          />
+                        </v-avatar>
+                      </td>
+                      <td class="font-weight-bold font-mono text-success">{{ item.sku }}</td>
+                      <td class="font-weight-black">{{ item.title }}</td>
+                      <td>
+                        <v-chip size="x-small" :color="getTypeColor(item.productType)" variant="flat" class="font-weight-black text-white px-2">
+                          {{ getTypeName(item.productType) }}
+                        </v-chip>
+                      </td>
+                      <td class="text-right font-weight-black" :class="item.currency === 'GAME_COIN' ? 'text-success' : 'text-primary'">
+                        {{ item.price.toLocaleString() }} {{ item.currency === 'GAME_COIN' ? gameCoinShort : shopCoinShort }}
+                        <v-chip v-if="item.dynamicPricingEnabled" size="x-small" color="warning" variant="tonal" class="ml-1 font-weight-black">
+                          动态
+                        </v-chip>
+                      </td>
+                      <td class="text-center">
+                        <settings-switch
+                          v-model="item.active"
                           color="success"
-                        />
-                      </v-avatar>
-                    </td>
-                    <td class="font-weight-bold font-mono text-success">{{ item.sku }}</td>
-                    <td class="font-weight-black">{{ item.title }}</td>
-                    <td>
-                      <v-chip size="x-small" :color="getTypeColor(item.productType)" variant="flat" class="font-weight-black text-white px-2">
-                        {{ getTypeName(item.productType) }}
-                      </v-chip>
-                    </td>
-                    <td class="text-right font-weight-black" :class="item.currency === 'GAME_COIN' ? 'text-success' : 'text-primary'">
-                      {{ item.price.toLocaleString() }} {{ item.currency === 'GAME_COIN' ? gameCoinShort : shopCoinShort }}
-                      <v-chip v-if="item.dynamicPricingEnabled" size="x-small" color="warning" variant="tonal" class="ml-1 font-weight-black">
-                        动态
-                      </v-chip>
-                    </td>
-                    <td class="text-center">
-                      <settings-switch
-                        v-model="item.active"
-                        color="success"
-                        hide-details
-                        density="compact"
-                        style="display: inline-block;"
-                        @change="handleToggleActive(item)"
-                      ></settings-switch>
-                    </td>
-                    <td class="text-center font-mono font-weight-medium">
-                      {{ item.perUserLimit ? `限购 ${item.perUserLimit} 件` : '无限制' }} / 
-                      {{ item.itemAmount ? `库存 ${item.stockRemaining}/${item.itemAmount}` : '无限' }}
-                    </td>
-                    <td class="text-center text-no-wrap">
-                      <v-btn
-                        size="x-small"
-                        color="success"
-                        variant="tonal"
-                        class="rounded-lg font-weight-black text-caption mr-1"
-                        prepend-icon="mdi-pencil-outline"
-                        @click="handleOpenUpsertDialog(item)"
-                      >
-                        编辑
-                      </v-btn>
-                      <v-btn
-                        size="x-small"
-                        color="warning"
-                        variant="outlined"
-                        class="rounded-lg font-weight-black text-caption"
-                        @click="handleResetLimit(item)"
-                      >
-                        重置限购
-                      </v-btn>
-                    </td>
-                  </tr>
-                  <tr v-if="filteredProducts.length === 0">
-                    <td colspan="8" class="text-center py-8 text-medium-emphasis font-weight-bold">
-                      暂无官方商品，调整筛选条件或点击新增创建。
-                    </td>
-                  </tr>
-                </tbody>
-              </v-table>
-            </div>
+                          hide-details
+                          density="compact"
+                          style="display: inline-block;"
+                          @change="handleToggleActive(item)"
+                        ></settings-switch>
+                      </td>
+                      <td class="text-center font-mono font-weight-medium">
+                        {{ item.perUserLimit ? `限购 ${item.perUserLimit} 件` : '无限制' }} / 
+                        {{ item.itemAmount ? `库存 ${item.stockRemaining}/${item.itemAmount}` : '无限' }}
+                      </td>
+                      <td class="text-center text-no-wrap">
+                        <v-btn
+                          size="x-small"
+                          color="success"
+                          variant="tonal"
+                          class="rounded-lg font-weight-black text-caption mr-1"
+                          prepend-icon="mdi-pencil-outline"
+                          @click="handleOpenUpsertDialog(item)"
+                        >
+                          编辑
+                        </v-btn>
+                        <v-btn
+                          size="x-small"
+                          color="warning"
+                          variant="outlined"
+                          class="rounded-lg font-weight-black text-caption"
+                          @click="handleResetLimit(item)"
+                        >
+                          重置限购
+                        </v-btn>
+                      </td>
+                    </tr>
+                    <tr v-if="filteredProducts.length === 0">
+                      <td colspan="8" class="text-center py-8 text-medium-emphasis font-weight-bold">
+                        暂无官方商品，调整筛选条件或点击新增创建。
+                      </td>
+                    </tr>
+                  </tbody>
+                </v-table>
+              </div>
+
+              <!-- 2. 手机端自适应卡片视图：仅在 md 以下小屏幕展示 -->
+              <div class="d-block d-md-none pa-3 bg-light-soft">
+                <v-row dense>
+                  <v-col v-for="item in filteredProducts" :key="item.sku" cols="12" class="py-1">
+                    <v-card variant="outlined" class="rounded-xl pa-4 glass-card border-s-4 border-success mb-1">
+                      <!-- Top section: Icon, SKU, Title, Switch -->
+                      <div class="d-flex align-start justify-space-between mb-3 ga-2">
+                        <div class="d-flex align-center">
+                          <v-avatar size="44" rounded="lg" color="grey-lighten-4" class="mr-3 border">
+                            <McIcon
+                              :material="item.displayMaterial || item.itemMaterial"
+                              :icon-url="item.displayIconPath"
+                              :size="30"
+                              color="success"
+                            />
+                          </v-avatar>
+                          <div>
+                            <div class="d-flex align-center flex-wrap ga-1">
+                              <span class="font-weight-black text-body-2 text-high-emphasis">{{ item.title }}</span>
+                              <v-chip size="x-small" :color="getTypeColor(item.productType)" variant="flat" class="font-weight-black text-white px-2 py-0">
+                                {{ getTypeName(item.productType) }}
+                              </v-chip>
+                            </div>
+                            <div class="font-mono text-xxs text-success font-weight-bold mt-1">{{ item.sku }}</div>
+                          </div>
+                        </div>
+                        
+                        <!-- Enable Switch -->
+                        <div>
+                          <settings-switch
+                            v-model="item.active"
+                            color="success"
+                            hide-details
+                            density="compact"
+                            @change="handleToggleActive(item)"
+                          ></settings-switch>
+                        </div>
+                      </div>
+
+                      <v-divider class="my-2"></v-divider>
+
+                      <!-- Middle section: Price & Limits/Stock -->
+                      <div class="d-flex justify-space-between align-center py-1 flex-wrap ga-2">
+                        <div class="text-caption">
+                          <span class="text-grey-darken-1 font-weight-bold mr-1">价格:</span>
+                          <span class="font-weight-black" :class="item.currency === 'GAME_COIN' ? 'text-success' : 'text-primary'">
+                            {{ item.price.toLocaleString() }} {{ item.currency === 'GAME_COIN' ? gameCoinShort : shopCoinShort }}
+                          </span>
+                          <v-chip v-if="item.dynamicPricingEnabled" size="x-small" color="warning" variant="tonal" class="ml-1 font-weight-black py-0">
+                            动态
+                          </v-chip>
+                        </div>
+                        
+                        <div class="text-caption font-mono font-weight-bold text-medium-emphasis">
+                          {{ item.perUserLimit ? `限购 ${item.perUserLimit} 件` : '不限购' }} | 
+                          {{ item.itemAmount ? `库存 ${item.stockRemaining}/${item.itemAmount}` : '无限量' }}
+                        </div>
+                      </div>
+
+                      <v-divider class="my-2"></v-divider>
+
+                      <!-- Bottom section: Action buttons -->
+                      <div class="d-flex justify-end ga-2 pt-1">
+                        <v-btn
+                          size="small"
+                          color="success"
+                          variant="tonal"
+                          class="rounded-lg font-weight-black text-caption"
+                          prepend-icon="mdi-pencil-outline"
+                          @click="handleOpenUpsertDialog(item)"
+                        >
+                          编辑商品
+                        </v-btn>
+                        <v-btn
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                          border
+                          class="rounded-lg font-weight-black text-caption"
+                          prepend-icon="mdi-restore"
+                          @click="handleResetLimit(item)"
+                        >
+                          重置限购
+                        </v-btn>
+                      </div>
+                    </v-card>
+                  </v-col>
+                  
+                  <v-col v-if="filteredProducts.length === 0" cols="12" class="text-center py-8 text-medium-emphasis font-weight-bold glass-card rounded-xl">
+                    暂无官方商品，调整筛选条件或点击新增创建。
+                  </v-col>
+                </v-row>
+              </div>
+            </template>
           </v-card>
         </v-window-item>
 
@@ -186,12 +281,12 @@
         <v-window-item value="cashier">
           <v-row justify="center" class="pt-4 pb-8">
             <v-col cols="12" sm="8" md="6" lg="5">
-              <v-card elevation="0" variant="outlined" class="rounded-xl pa-6 bg-white border border-success-light text-center">
+              <v-card elevation="0" variant="outlined" class="rounded-xl pa-6 glass-card border-s-4 border-success text-center">
                 <v-avatar color="success-lighten-5" size="64" class="mb-4 border">
                   <v-icon color="success" size="36">mdi-barcode-scan</v-icon>
                 </v-avatar>
-                <h3 class="text-h6 font-weight-black text-slate-800">线下团购券人工核销</h3>
-                <p class="text-caption text-medium-emphasis mt-1 mb-6 leading-relaxed">
+                <h3 class="text-h6 font-weight-black text-high-emphasis">线下团购券人工核销</h3>
+                <p class="text-caption text-medium-emphasis mt-1 mb-6">
                   当玩家在第三方渠道或线下完成支付后，可将获得的核销凭证（GB-码）填入下方。系统核销无误后会立即触发游戏内置发货队列，向对应的玩家角色发放资产物品。
                 </p>
 
@@ -230,12 +325,12 @@
 
         <!-- Redemption Codes Tab -->
         <v-window-item value="redeem">
-          <v-card elevation="0" variant="outlined" class="rounded-xl overflow-hidden bg-white border border-success-light">
+          <v-card elevation="0" variant="outlined" class="rounded-xl overflow-hidden glass-card border-s-4 border-success">
             <!-- Summary Metrics Cards -->
-            <div class="pa-4 bg-grey-lighten-5 border-b">
+            <div class="pa-4 bg-light-soft border-b">
               <v-row dense>
                 <v-col cols="12" sm="4">
-                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 bg-white border">
+                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 glass-card">
                     <div class="d-flex align-center justify-space-between">
                       <div>
                         <p class="text-xxs text-grey-darken-1 font-weight-bold">全服生效中兑换码</p>
@@ -248,7 +343,7 @@
                   </v-card>
                 </v-col>
                 <v-col cols="12" sm="4">
-                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 bg-white border">
+                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 glass-card">
                     <div class="d-flex align-center justify-space-between">
                       <div>
                         <p class="text-xxs text-grey-darken-1 font-weight-bold">累计被使用次数</p>
@@ -261,7 +356,7 @@
                   </v-card>
                 </v-col>
                 <v-col cols="12" sm="4">
-                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 bg-white border">
+                  <v-card elevation="0" variant="outlined" class="rounded-lg pa-3 glass-card">
                     <div class="d-flex align-center justify-space-between">
                       <div>
                         <p class="text-xxs text-grey-darken-1 font-weight-bold">已兑换ShopCoin总计</p>
@@ -277,7 +372,7 @@
             </div>
 
             <!-- Table Toolbar -->
-            <div class="pa-4 border-b d-flex flex-column flex-sm-row justify-space-between align-sm-center ga-3 bg-grey-lighten-5">
+            <div class="pa-4 border-b d-flex flex-column flex-sm-row justify-space-between align-sm-center ga-3 bg-light-soft">
               <div class="d-flex align-center flex-wrap ga-3 flex-grow-1">
                 <v-text-field
                   v-model="redeemSearch"
@@ -290,7 +385,6 @@
                   clearable
                   color="success"
                   style="max-width: 320px; width: 100%;"
-                  class="bg-white"
                 ></v-text-field>
 
                 <v-select
@@ -305,7 +399,6 @@
                   rounded="lg"
                   color="success"
                   style="width: 160px;"
-                  class="bg-white"
                 ></v-select>
               </div>
               
@@ -334,9 +427,9 @@
             <v-skeleton-loader v-if="redeemLoading && redeemCodes.length === 0" type="table-row-divider@6" class="bg-transparent"></v-skeleton-loader>
 
             <div v-else class="table-container overflow-x-auto">
-              <v-table class="bg-transparent text-slate-800">
+              <v-table class="bg-transparent text-high-emphasis">
                 <thead>
-                  <tr class="bg-table-header text-slate-800">
+                  <tr class="bg-table-header text-high-emphasis">
                     <th class="font-weight-black text-caption">兑换券码</th>
                     <th class="font-weight-black text-caption">赠送币种与额度</th>
                     <th class="font-weight-black text-caption text-center">兑换上限与使用进度</th>
@@ -425,11 +518,11 @@
 
         <!-- Orders History Tab -->
         <v-window-item value="orders">
-          <v-card elevation="0" variant="outlined" class="rounded-xl overflow-hidden bg-white border border-success-light">
+          <v-card elevation="0" variant="outlined" class="rounded-xl overflow-hidden glass-card border-s-4 border-success">
             <!-- Table Toolbar -->
-            <div class="pa-4 border-b d-flex justify-space-between align-center flex-wrap bg-grey-lighten-5">
+            <div class="pa-4 border-b d-flex justify-space-between align-center flex-wrap bg-light-soft">
               <div>
-                <h3 class="text-subtitle-1 font-weight-black text-slate-800">全服交易流水账单</h3>
+                <h3 class="text-subtitle-1 font-weight-black text-high-emphasis">全服交易流水账单</h3>
                 <p class="text-caption text-medium-emphasis">监控包含官方直购、药水增益、兑换指令以及玩家C2C市场的全部交易单据。</p>
               </div>
               <v-btn
@@ -446,7 +539,7 @@
             </div>
 
             <!-- Table Filters -->
-            <div class="pa-4 bg-grey-lighten-5 border-b">
+            <div class="pa-4 bg-light-soft border-b">
               <v-row align="center" dense>
                 <v-col cols="12" sm="6" md="3">
                   <v-text-field
@@ -459,7 +552,6 @@
                     rounded="lg"
                     clearable
                     color="success"
-                    class="bg-white"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="12" sm="6" md="3">
@@ -473,7 +565,6 @@
                     rounded="lg"
                     clearable
                     color="success"
-                    class="bg-white"
                   ></v-text-field>
                 </v-col>
                 <v-col cols="6" md="3">
@@ -488,7 +579,6 @@
                     hide-details
                     rounded="lg"
                     color="success"
-                    class="bg-white"
                   ></v-select>
                 </v-col>
                 <v-col cols="6" md="3">
@@ -503,7 +593,6 @@
                     hide-details
                     rounded="lg"
                     color="success"
-                    class="bg-white"
                   ></v-select>
                 </v-col>
               </v-row>
@@ -513,7 +602,7 @@
 
             <!-- Table -->
             <div v-else class="table-container overflow-y-auto">
-              <v-table class="bg-transparent text-slate-800">
+              <v-table class="bg-transparent text-high-emphasis">
                 <thead>
                   <tr class="bg-table-header">
                     <th class="font-weight-black text-caption">创建时间</th>
@@ -540,7 +629,7 @@
                     </td>
                     <td>
                       <div class="d-flex align-center">
-                        <span class="font-weight-bold text-slate-800">{{ order.title }}</span>
+                        <span class="font-weight-bold text-high-emphasis">{{ order.title }}</span>
                         <v-chip size="x-small" color="grey-darken-1" variant="tonal" class="ml-2 font-mono px-1 rounded-sm">{{ order.sku }}</v-chip>
                       </div>
                     </td>
@@ -567,7 +656,7 @@
 
       <!-- Products Upsert Dialogue -->
       <v-dialog v-model="upsertDialog" max-width="880" scrollable>
-        <v-card elevation="0" variant="outlined" class="rounded-xl bg-white border-card-top-success pa-4">
+        <v-card elevation="0" variant="outlined" class="rounded-xl glass-card border-t-4 border-success pa-4">
           <!-- Dialog Header -->
           <div class="d-flex align-center justify-space-between mb-4">
             <div class="d-flex align-center">
@@ -587,7 +676,7 @@
           <v-divider class="mb-2"></v-divider>
 
           <!-- Required / Optional Form Tabs Menu -->
-          <v-tabs v-model="formTab" color="success" density="comfortable" grow class="mb-4 bg-grey-lighten-5 rounded-lg pa-1">
+          <v-tabs v-model="formTab" color="success" density="comfortable" grow class="mb-4 bg-light-soft rounded-lg pa-1">
             <v-tab value="required" class="font-weight-black text-caption">
               <v-icon start size="16">mdi-alert-circle-outline</v-icon>
               必填配置 (Required)
@@ -824,7 +913,7 @@
                       color="success"
                       variant="outlined"
                       divided
-                      class="rounded-xl mb-3 d-flex w-100 bg-white"
+                      class="rounded-xl mb-3 d-flex w-100 bg-light-soft"
                       style="height: 44px;"
                     >
                       <v-btn value="unlimited" class="flex-grow-1 font-weight-black text-caption">
@@ -870,7 +959,6 @@
                         v-model="formProduct.active"
                         color="success"
                         :label="formProduct.active ? '商品启用状态：启用中 (立即上架玩家可见)' : '商品启用状态：已停用 (隐藏下架状态)'"
-                        density="comfortable"
                         hide-details
                       ></settings-switch>
                     </v-col>
@@ -892,7 +980,7 @@
                   <!-- Custom Icon strategies under Active status -->
                   <v-expand-transition>
                     <div v-if="formProduct.active">
-                      <v-card variant="outlined" elevation="0" class="rounded-xl pa-4 bg-grey-lighten-5 mb-4 border border-success-light">
+                      <v-card variant="outlined" elevation="0" class="rounded-xl pa-4 bg-grey-lighten-5 mb-4 border-s-4 border-success">
                         <p class="text-caption text-grey-darken-3 font-weight-bold mb-2">商品展示图标策略：</p>
                         <v-btn-toggle
                           v-model="iconStrategy"
@@ -900,7 +988,7 @@
                           color="success"
                           variant="outlined"
                           divided
-                          class="rounded-xl mb-3 d-flex w-100 bg-white"
+                          class="rounded-xl mb-3 d-flex w-100 bg-light-soft"
                           style="height: 40px;"
                         >
                           <v-btn value="material" class="flex-grow-1 font-weight-black text-caption">使用原版/其它材质图标 (Material Icon)</v-btn>
@@ -999,7 +1087,7 @@
                     3. 经济学动态波动价格策略 (Dynamic Pricing Strategy)
                   </h4>
 
-                  <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 bg-grey-lighten-5 mb-4 border-warning-dashed">
+                  <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 bg-grey-lighten-5 mb-4 border-dashed border-warning">
                     <div class="d-flex align-center justify-space-between flex-wrap mb-3">
                       <div class="d-flex align-center">
                         <settings-switch
@@ -1007,7 +1095,6 @@
                           color="warning"
                           label="启用基于供需关系的热度波动计价"
                           hide-details
-                          density="comfortable"
                           class="mr-4 text-warning"
                         ></settings-switch>
                         <span class="text-caption text-medium-emphasis">根据全服物品购买/回收热度计算交易价，控制通货膨胀。</span>
@@ -1101,7 +1188,7 @@
                         <p class="text-caption text-warning font-weight-black mb-3">动态价格 - 高级波动算法变量微调（实时同步双向 JSON）：</p>
 
                         <!-- LINEAR_DEMAND Advanced variables -->
-                        <div v-if="formProduct.dynamicAlgorithm === 'LINEAR_DEMAND'" class="pa-3 bg-white border rounded-xl mb-3">
+                        <div v-if="formProduct.dynamicAlgorithm === 'LINEAR_DEMAND'" class="pa-3 bg-light-soft border rounded-xl mb-3">
                           <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
                             <v-icon color="warning" class="mr-2">mdi-chart-line</v-icon>
                             线性需求参数：每次交易后，价格随供需斜率以 k 进行线性递增或递减波动。
@@ -1129,7 +1216,7 @@
                         </div>
 
                         <!-- MARGINAL_DECAY Advanced variables -->
-                        <div v-if="formProduct.dynamicAlgorithm === 'MARGINAL_DECAY'" class="pa-3 bg-white border rounded-xl mb-3">
+                        <div v-if="formProduct.dynamicAlgorithm === 'MARGINAL_DECAY'" class="pa-3 bg-light-soft border rounded-xl mb-3">
                           <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
                             <v-icon color="warning" class="mr-2">mdi-trending-down</v-icon>
                             边际递减参数：价格波动受振幅与抑制系数控制，热度增长时呈现边际效用递减效应。
@@ -1177,7 +1264,7 @@
                         </div>
 
                         <!-- LOGARITHMIC_SMOOTH Advanced variables -->
-                        <div v-if="formProduct.dynamicAlgorithm === 'LOGARITHMIC_SMOOTH'" class="pa-3 bg-white border rounded-xl mb-3">
+                        <div v-if="formProduct.dynamicAlgorithm === 'LOGARITHMIC_SMOOTH'" class="pa-3 bg-light-soft border rounded-xl mb-3">
                           <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
                             <v-icon color="warning" class="mr-2">mdi-calculator</v-icon>
                             对数平滑参数：通过自然对数尺度压缩巨量销量冲击，避免大单交易让售价产生瞬间暴涨暴跌。
@@ -1205,7 +1292,7 @@
                         </div>
 
                         <!-- EXPONENTIAL_DEFENSE Advanced variables -->
-                        <div v-if="formProduct.dynamicAlgorithm === 'EXPONENTIAL_DEFENSE'" class="pa-3 bg-white border rounded-xl mb-3">
+                        <div v-if="formProduct.dynamicAlgorithm === 'EXPONENTIAL_DEFENSE'" class="pa-3 bg-light-soft border rounded-xl mb-3">
                           <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
                             <v-icon color="warning" class="mr-2">mdi-shield-alert-outline</v-icon>
                             指数防御参数：高敏感指数防护策略，在遭受批量投机刷取或疯狂倾销时，计算价格自动进行指数级极速偏离保护。
@@ -1233,7 +1320,7 @@
                         </div>
 
                         <!-- THRESHOLD_STEP Advanced variables -->
-                        <div v-if="formProduct.dynamicAlgorithm === 'THRESHOLD_STEP'" class="pa-3 bg-white border rounded-xl mb-3">
+                        <div v-if="formProduct.dynamicAlgorithm === 'THRESHOLD_STEP'" class="pa-3 bg-light-soft border rounded-xl mb-3">
                           <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
                             <v-icon color="warning" class="mr-2">mdi-stairs</v-icon>
                             阈值分段参数：基于设定阈值门槛的双段斜率公式。当需求累积跨过临界线时，将由低灵敏度偏离斜率自动跃升为高保护斜率。
@@ -1276,7 +1363,7 @@
                         </div>
 
                         <!-- ELASTICITY_MODEL Advanced variables -->
-                        <div v-if="formProduct.dynamicAlgorithm === 'ELASTICITY_MODEL'" class="pa-3 bg-white border rounded-xl mb-3">
+                        <div v-if="formProduct.dynamicAlgorithm === 'ELASTICITY_MODEL'" class="pa-3 bg-light-soft border rounded-xl mb-3">
                           <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
                             <v-icon color="warning" class="mr-2">mdi-sine-wave</v-icon>
                             弹性模型参数：模拟现实市场需求价格弹性算法。考虑底线刚性需求平滑因子与参考期望热度，动态反馈价格波动。
@@ -1335,7 +1422,7 @@
                         </div>
 
                         <!-- PANIC_BUYING Advanced variables -->
-                        <div v-if="formProduct.dynamicAlgorithm === 'PANIC_BUYING'" class="pa-3 bg-white border rounded-xl mb-3">
+                        <div v-if="formProduct.dynamicAlgorithm === 'PANIC_BUYING'" class="pa-3 bg-light-soft border rounded-xl mb-3">
                           <p class="text-caption font-weight-bold text-grey-darken-3 d-flex align-center">
                             <v-icon color="warning" class="mr-2">mdi-lightning-bolt-outline</v-icon>
                             恐慌抢购参数：当销量速率爆发越过“恐慌警戒点”时，在原有线性斜率基础之上级联触发非线性的二次恐慌加成振幅。
@@ -1457,7 +1544,7 @@
 
       <!-- Redemption Code Creation Dialogue -->
       <v-dialog v-model="redeemDialog" max-width="520" scrollable>
-        <v-card elevation="0" variant="outlined" class="rounded-xl bg-white border-card-top-success pa-4">
+        <v-card elevation="0" variant="outlined" class="rounded-xl glass-card border-card-top-success pa-4">
           <!-- Dialog Header -->
           <div class="d-flex align-center justify-space-between mb-4">
             <div class="d-flex align-center">
@@ -2693,130 +2780,3 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-/* Material Design Elements */
-.header-card {
-  border-top: 4px solid rgb(var(--v-theme-success)) !important;
-  background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.05) 0%, rgba(255, 255, 255, 1) 100%) !important;
-  border-left: 1px solid rgba(var(--v-theme-success), 0.1) !important;
-  border-right: 1px solid rgba(var(--v-theme-success), 0.1) !important;
-  border-bottom: 1px solid rgba(var(--v-theme-success), 0.1) !important;
-}
-
-.border-success-light {
-  border-left: 4px solid rgb(var(--v-theme-success)) !important;
-}
-.border-card-top-success {
-  border-top: 4px solid rgb(var(--v-theme-success)) !important;
-}
-
-/* Table header styling */
-.bg-table-header {
-  background-color: rgba(var(--v-theme-success), 0.04) !important;
-}
-.v-theme--dark .bg-table-header {
-  background-color: rgba(var(--v-theme-success), 0.1) !important;
-}
-
-.hover-bg-row {
-  transition: all 0.2s ease;
-}
-.hover-bg-row:hover {
-  background-color: rgba(var(--v-theme-success), 0.03) !important;
-}
-
-.border-warning-dashed {
-  border: 1px dashed rgba(217, 119, 6, 0.3) !important;
-}
-
-.text-slate-800 {
-  color: #1e293b;
-}
-.v-theme--dark .text-slate-800 {
-  color: #f1f5f9;
-}
-
-.width-60 {
-  width: 60px;
-}
-
-.font-mono {
-  font-family: monospace !important;
-}
-
-.leading-relaxed {
-  line-height: 1.625;
-}
-
-.text-xxs {
-  font-size: 0.7rem;
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* =============================================================
- * 7. Dark Mode & Various Themes Adaptations
- * ============================================================= */
-.v-theme--dark .bg-white {
-  background-color: #1e1e1e !important;
-  color: #f1f5f9 !important;
-}
-
-.v-theme--dark .bg-white :deep(.v-field) {
-  background-color: #1a1a1a !important;
-}
-
-.v-theme--dark .bg-grey-lighten-4 {
-  background-color: #2b2b2b !important;
-}
-
-.v-theme--dark .bg-grey-lighten-5 {
-  background-color: #202020 !important;
-}
-
-.v-theme--dark .header-card {
-  background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.15) 0%, #1e1e1e 100%) !important;
-  border-color: rgba(var(--v-theme-success), 0.15) !important;
-}
-
-.v-theme--dark .hover-bg-row:hover {
-  background-color: rgba(var(--v-theme-success), 0.08) !important;
-}
-
-.v-theme--dark .border-warning-dashed {
-  border-color: rgba(245, 158, 11, 0.4) !important;
-}
-
-.v-theme--dark .border-success-light {
-  border-left-color: rgb(var(--v-theme-success)) !important;
-}
-
-.v-theme--dark .v-card {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-.v-theme--dark .border-card-top-success {
-  border-top: 4px solid rgb(var(--v-theme-success)) !important;
-}
-
-.v-theme--dark .border {
-  border-color: rgba(255, 255, 255, 0.08) !important;
-}
-
-.v-theme--dark .border-b {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-}
-</style>

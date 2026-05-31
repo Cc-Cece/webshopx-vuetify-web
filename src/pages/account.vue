@@ -82,8 +82,8 @@
           <div>
             <v-card-item class="px-0 pt-0">
               <template #title>
-                <div class="text-h5 font-weight-bold d-flex align-center text-orange">
-                  <v-icon color="orange" class="mr-2" size="28">mdi-alert-decagram-outline</v-icon>
+                <div class="text-h5 font-weight-bold d-flex align-center text-warning">
+                  <v-icon color="warning" class="mr-2" size="28">mdi-alert-decagram-outline</v-icon>
                   <span>{{ $t('app.uiText.page.authTipTitle') }}</span>
                 </div>
               </template>
@@ -93,8 +93,8 @@
 
             <v-card-text class="px-0 py-2">
               <div class="d-flex align-start mb-4">
-                <v-avatar color="orange-lighten-5" class="mr-3" size="36">
-                  <v-icon color="orange" size="18">mdi-numeric-1</v-icon>
+                <v-avatar color="warning-lighten-5" class="mr-3" size="36">
+                  <v-icon color="warning" size="18">mdi-numeric-1</v-icon>
                 </v-avatar>
                 <div>
                   <h4 class="font-weight-bold mb-1">{{ $t('app.uiText.page.authPasswordTipTitle') }}</h4>
@@ -103,8 +103,8 @@
               </div>
 
               <div class="d-flex align-start">
-                <v-avatar color="orange-lighten-5" class="mr-3" size="36">
-                  <v-icon color="orange" size="18">mdi-numeric-2</v-icon>
+                <v-avatar color="warning-lighten-5" class="mr-3" size="36">
+                  <v-icon color="warning" size="18">mdi-numeric-2</v-icon>
                 </v-avatar>
                 <div>
                   <h4 class="font-weight-bold mb-1">使用凭证登录</h4>
@@ -116,7 +116,7 @@
 
           <v-card-actions class="px-0 pb-0 pt-4">
             <v-btn
-              color="orange"
+              color="warning"
               variant="tonal"
               block
               rounded="lg"
@@ -162,7 +162,7 @@
               </v-avatar>
             </div>
 
-            <h3 class="text-h5 font-weight-bold text-slate-800">{{ currentUser?.username }}</h3>
+            <h3 class="text-h5 font-weight-bold text-high-emphasis">{{ currentUser?.username }}</h3>
             
             <v-chip
               size="small"
@@ -221,15 +221,15 @@
       </v-col>
 
       <!-- Right Column: Wallet balances, Exchange and Redeem forms, Admin diagnostics -->
-      <v-col cols="12" md="8" lg="9" class="d-flex flex-column gap-y-6">
+      <v-col cols="12" md="8" lg="9" class="d-flex flex-column ga-y-6">
         <!-- 1. Wallet Balances Summary -->
         <v-row class="mb-1">
           <v-col cols="12" sm="6" class="py-1">
             <v-card
               elevation="0"
               variant="outlined"
-              class="rounded-xl pa-5 glass-card border-s-4"
-              style="border-left-color: rgb(var(--v-theme-primary)) !important; background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.07) 0%, rgba(var(--v-theme-surface), 0.6) 100%) !important;"
+              class="rounded-xl pa-5 glass-card border-s-4 border-primary"
+              style="background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.07) 0%, rgba(var(--v-theme-surface), 0.6) 100%) !important;"
             >
               <div class="d-flex justify-space-between align-center mb-1">
                 <div class="text-overline text-medium-emphasis">
@@ -252,8 +252,8 @@
             <v-card
               elevation="0"
               variant="outlined"
-              class="rounded-xl pa-5 glass-card border-s-4"
-              style="border-left-color: rgb(var(--v-theme-success)) !important; background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.07) 0%, rgba(var(--v-theme-surface), 0.6) 100%) !important;"
+              class="rounded-xl pa-5 glass-card border-s-4 border-success"
+              style="background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.07) 0%, rgba(var(--v-theme-surface), 0.6) 100%) !important;"
             >
               <div class="d-flex justify-space-between align-center mb-1">
                 <div class="text-overline text-medium-emphasis">
@@ -639,27 +639,3 @@ const showSnackbar = (text: string, color: string) => {
 }
 </script>
 
-<style scoped>
-.glass-card {
-  background: rgba(var(--v-theme-surface), 0.7) !important;
-  backdrop-filter: blur(12px) !important;
-  border: 1px solid rgba(var(--v-theme-primary), 0.08) !important;
-}
-
-.hover-lift {
-  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
-}
-
-.hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px -10px rgba(var(--v-theme-primary), 0.15) !important;
-}
-
-.gap-y-6 {
-  row-gap: 24px;
-}
-
-.bg-surface-variant-opacity {
-  background-color: rgba(var(--v-theme-surface-variant), 0.05) !important;
-}
-</style>

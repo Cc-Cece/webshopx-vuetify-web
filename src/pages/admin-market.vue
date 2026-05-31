@@ -237,7 +237,6 @@
                         v-model="limitationsConfig.defaultCreateCostEnabled"
                         color="warning"
                         label="启用上架建单费"
-                        density="comfortable"
                         hide-details
                       ></settings-switch>
                     </v-col>
