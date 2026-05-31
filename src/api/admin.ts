@@ -85,5 +85,8 @@ export const adminApi = {
   
   // L10n manifest proxying
   getL10nManifest: (params?: QueryParams) => apiClient.get("/admin/l10n/manifest", { params }),
+  
+  // Overview stats
+  getOverviewStats: () => apiClient.get("/admin/overview/stats"),
 };
 

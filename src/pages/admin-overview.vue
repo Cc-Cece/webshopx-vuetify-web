@@ -1,11 +1,24 @@
 <template>
   <admin-gate>
     <v-container fluid class="pa-6 animate-fade-in">
-      <!-- Header banner -->
-      <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 mb-6 glass-card header-card">
-        <v-row no-gutters align="center" justify="end" class="flex-wrap">
-          <v-col cols="12" class="d-flex flex-wrap justify-start justify-md-end align-center">
-            <!-- Tabs Menu -->
+      <!-- Premium Hero Greeting Banner -->
+      <v-card elevation="0" variant="outlined" class="rounded-xl pa-5 mb-6 glass-card header-card hero-gradient overflow-hidden position-relative border-primary-light">
+        <div class="hero-overlay"></div>
+        <v-row align="center" no-gutters class="z-index-1">
+          <v-col cols="12" sm="8" class="d-flex align-center flex-wrap">
+            <v-avatar size="48" color="primary-lighten-5" class="mr-4 border-primary border-white-glow">
+              <v-icon size="24" color="primary">mdi-shield-crown-outline</v-icon>
+            </v-avatar>
+            <div>
+              <h2 class="text-h5 font-weight-black text-slate-800 leading-tight mb-1">
+                {{ greetingText }}，管理员
+              </h2>
+              <p class="text-caption text-medium-emphasis mb-0 font-weight-medium">
+                欢迎回来。系统当前运行平稳，您可以实时监控在线玩家、商店营收和市场运行。
+              </p>
+            </div>
+          </v-col>
+          <v-col cols="12" sm="4" class="d-flex justify-start justify-sm-end align-center mt-3 mt-sm-0">
             <v-tabs
               v-model="activeTab"
               color="primary"
@@ -24,20 +37,110 @@
       <v-window v-model="activeTab">
         <!-- Status Tab -->
         <v-window-item value="status">
-          <!-- Status Grid -->
+          <!-- Real-time Stats Grid -->
           <v-row class="mb-4">
-            <v-col cols="12" sm="6" md="3" v-for="stat in systemStats" :key="stat.title">
+            <!-- 1. Player Status -->
+            <v-col cols="12" sm="6" md="3">
               <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 glass-card fill-height hover-lift">
                 <div class="d-flex align-center justify-between mb-2">
-                  <span class="text-caption font-weight-bold text-medium-emphasis">{{ stat.title }}</span>
-                  <v-avatar :color="stat.avatarColor" size="32">
-                    <v-icon :color="stat.color" size="18">{{ stat.icon }}</v-icon>
+                  <span class="text-caption font-weight-bold text-medium-emphasis">全服在线玩家</span>
+                  <v-avatar color="success-lighten-5" size="32">
+                    <v-icon color="success" size="18">mdi-account-multiple</v-icon>
                   </v-avatar>
                 </div>
-                <div class="text-h4 font-weight-black text-slate-800">{{ stat.value }}</div>
-                <div class="text-caption text-grey-darken-1 mt-1 d-flex align-center">
-                  <v-icon :color="stat.trendColor" size="14" class="mr-1">{{ stat.trendIcon }}</v-icon>
-                  <span>{{ stat.trendText }}</span>
+                <div class="d-flex align-center justify-between mt-1">
+                  <div class="text-h4 font-weight-black text-slate-800">{{ statsData.onlinePlayers }} <span class="text-caption text-medium-emphasis">/ {{ statsData.maxPlayers }}</span></div>
+                  <v-progress-circular
+                    :model-value="playerPercentage"
+                    size="36"
+                    width="4"
+                    color="success"
+                    class="ml-2"
+                  >
+                    <span class="text-xxs font-weight-bold">{{ Math.round(playerPercentage) }}%</span>
+                  </v-progress-circular>
+                </div>
+                <div class="text-caption text-grey-darken-1 mt-3 d-flex align-center">
+                  <v-icon color="success" size="14" class="mr-1">mdi-link</v-icon>
+                  <span class="text-truncate">{{ statsData.boundUsers }} 绑定角色 (共 {{ statsData.totalUsers }} 注册)</span>
+                </div>
+              </v-card>
+            </v-col>
+
+            <!-- 2. Official Shop -->
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 glass-card fill-height hover-lift">
+                <div class="d-flex align-center justify-between mb-2">
+                  <span class="text-caption font-weight-bold text-medium-emphasis">官方商城运营</span>
+                  <v-avatar color="primary-lighten-5" size="32">
+                    <v-icon color="primary" size="18">mdi-storefront-outline</v-icon>
+                  </v-avatar>
+                </div>
+                <div class="text-h4 font-weight-black text-slate-800 text-truncate" :title="`${statsData.totalRevenue} ${shopCoinShort}`">
+                  {{ statsData.totalRevenue.toLocaleString() }} <span class="text-caption text-medium-emphasis">{{ shopCoinShort }}</span>
+                </div>
+                <v-progress-linear
+                  :model-value="orderCompletionRate"
+                  color="primary"
+                  height="4"
+                  rounded
+                  class="mt-3"
+                ></v-progress-linear>
+                <div class="text-caption text-grey-darken-1 mt-2 d-flex align-center">
+                  <v-icon color="primary" size="14" class="mr-1">mdi-cart-check</v-icon>
+                  <span class="text-truncate">已完成订单 {{ statsData.completedOrders }} / {{ statsData.totalOrders }}</span>
+                </div>
+              </v-card>
+            </v-col>
+
+            <!-- 3. C2C Market -->
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 glass-card fill-height hover-lift">
+                <div class="d-flex align-center justify-between mb-2">
+                  <span class="text-caption font-weight-bold text-medium-emphasis">C2C 市场交易额</span>
+                  <v-avatar color="warning-lighten-5" size="32">
+                    <v-icon color="warning" size="18">mdi-scale-balance</v-icon>
+                  </v-avatar>
+                </div>
+                <div class="text-h4 font-weight-black text-slate-800 text-truncate" :title="`${statsData.totalTradeVolume} ${shopCoinShort}`">
+                  {{ statsData.totalTradeVolume.toLocaleString() }} <span class="text-caption text-medium-emphasis">{{ shopCoinShort }}</span>
+                </div>
+                <v-progress-linear
+                  :model-value="c2cCompletionRate"
+                  color="warning"
+                  height="4"
+                  rounded
+                  class="mt-3"
+                ></v-progress-linear>
+                <div class="text-caption text-grey-darken-1 mt-2 d-flex align-center">
+                  <v-icon color="warning" size="14" class="mr-1">mdi-basket-outline</v-icon>
+                  <span class="text-truncate">寄售中 {{ statsData.activeListings }} 件 / 成交 {{ statsData.completedTrades }} 笔</span>
+                </div>
+              </v-card>
+            </v-col>
+
+            <!-- 4. Redeem Coupons -->
+            <v-col cols="12" sm="6" md="3">
+              <v-card elevation="0" variant="outlined" class="rounded-xl pa-4 glass-card fill-height hover-lift">
+                <div class="d-flex align-center justify-between mb-2">
+                  <span class="text-caption font-weight-bold text-medium-emphasis">系统兑换卡券</span>
+                  <v-avatar color="secondary-lighten-5" size="32">
+                    <v-icon color="secondary" size="18">mdi-ticket-percent-outline</v-icon>
+                  </v-avatar>
+                </div>
+                <div class="text-h4 font-weight-black text-slate-800">
+                  {{ statsData.totalRedeemUses }} <span class="text-caption text-medium-emphasis">次兑换</span>
+                </div>
+                <v-progress-linear
+                  :model-value="Math.min(100, (statsData.totalRedeemUses / (statsData.totalRedeemCodes || 1)) * 10)"
+                  color="secondary"
+                  height="4"
+                  rounded
+                  class="mt-3"
+                ></v-progress-linear>
+                <div class="text-caption text-grey-darken-1 mt-2 d-flex align-center">
+                  <v-icon color="secondary" size="14" class="mr-1">mdi-qrcode</v-icon>
+                  <span class="text-truncate">已生成 {{ statsData.totalRedeemCodes }} 种优惠兑换码</span>
                 </div>
               </v-card>
             </v-col>
@@ -122,7 +225,7 @@
                     </template>
                     <v-list-item-title class="text-caption font-weight-bold text-slate-800">{{ $t('admin.uiText.autoHtml.k0209') }}</v-list-item-title>
                     <template #append>
-                      <v-chip size="x-small" color="primary" variant="flat" class="font-weight-bold">MySQL 8.0</v-chip>
+                      <v-chip size="x-small" color="primary" variant="flat" class="font-weight-bold">SQLite / MySQL</v-chip>
                     </template>
                   </v-list-item>
 
@@ -166,6 +269,62 @@
                     </template>
                   </v-list-item>
                 </v-list>
+              </v-card>
+            </v-col>
+          </v-row>
+
+          <!-- Recent Audit Logs Timeline Quickview -->
+          <v-row class="mt-4">
+            <v-col cols="12">
+              <v-card elevation="0" variant="outlined" class="rounded-xl pa-5 glass-card border-warning-light">
+                <div class="d-flex align-center justify-between mb-4 flex-wrap">
+                  <div class="d-flex align-center">
+                    <v-avatar color="warning-lighten-5" size="38" class="mr-3">
+                      <v-icon color="warning" size="20">mdi-history</v-icon>
+                    </v-avatar>
+                    <div>
+                      <h3 class="text-subtitle-1 font-weight-black text-slate-800">近期管理员审计日志</h3>
+                      <p class="text-caption text-medium-emphasis">展示最近发生的安全审计与操作事件，确保运维可追溯性。</p>
+                    </div>
+                  </div>
+                  <v-btn
+                    variant="text"
+                    color="primary"
+                    class="font-weight-bold text-caption rounded-lg mt-2 mt-sm-0"
+                    append-icon="mdi-arrow-right"
+                    @click="activeTab = 'audit'"
+                  >
+                    查看完整日志
+                  </v-btn>
+                </div>
+
+                <v-skeleton-loader v-if="auditLoading && auditList.length === 0" type="list-item-three-line@3" class="bg-transparent"></v-skeleton-loader>
+
+                <div v-else class="timeline-container px-2">
+                  <v-timeline side="end" align="start" density="compact" class="px-0">
+                    <v-timeline-item
+                      v-for="log in auditList.slice(0, 5)"
+                      :key="log.id"
+                      :dot-color="getActionColor(log.action)"
+                      size="small"
+                      class="mb-2"
+                    >
+                      <div class="d-flex justify-between flex-wrap align-center w-100">
+                        <div class="text-left">
+                          <span class="font-weight-black text-slate-800 mr-2">{{ log.username }}</span>
+                          <v-chip size="x-small" :color="getActionColor(log.action)" variant="tonal" class="mr-2 font-weight-bold font-mono">
+                            {{ log.action }}
+                          </v-chip>
+                          <span class="text-caption text-slate-800">{{ log.description }}</span>
+                        </div>
+                        <span class="text-caption text-medium-emphasis font-mono ml-sm-4">{{ formatTime(log.createdAt) }}</span>
+                      </div>
+                    </v-timeline-item>
+                  </v-timeline>
+                  <div v-if="auditList.length === 0" class="text-center py-4 text-medium-emphasis text-caption">
+                    暂无安全审计记录。
+                  </div>
+                </div>
               </v-card>
             </v-col>
           </v-row>
@@ -584,48 +743,76 @@ const announceTitle = ref('')
 const announceContent = ref('')
 const announceLoading = ref(false)
 
-const systemStats = computed(() => [
-  {
-    title: '全服在线玩家',
-    value: '42 / 100',
-    icon: 'mdi-account-multiple',
-    color: 'success',
-    avatarColor: 'success-lighten-5',
-    trendIcon: 'mdi-trending-up',
-    trendColor: 'success',
-    trendText: '+15% 较昨日',
-  },
-  {
-    title: '官方上架商品',
-    value: '18 款',
-    icon: 'mdi-package-variant-closed',
-    color: 'primary',
-    avatarColor: 'primary-lighten-5',
-    trendIcon: 'mdi-trending-neutral',
-    trendColor: 'grey',
-    trendText: '保持平稳',
-  },
-  {
-    title: 'C2C 市场交易额',
-    value: `124,500 ${shopCoinShort.value}`,
-    icon: 'mdi-security',
-    color: 'warning',
-    avatarColor: 'warning-lighten-5',
-    trendIcon: 'mdi-trending-up',
-    trendColor: 'success',
-    trendText: '+8.4% 较上周',
-  },
-  {
-    title: '系统激活卡券',
-    value: '840 枚',
-    icon: 'mdi-ticket-percent-outline',
-    color: 'secondary',
-    avatarColor: 'secondary-lighten-5',
-    trendIcon: 'mdi-trending-up',
-    trendColor: 'success',
-    trendText: '+126 今日发包',
+const greetingText = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 6) return '晨曦微露'
+  if (hour < 9) return '早上好'
+  if (hour < 12) return '上午好'
+  if (hour < 14) return '中午好'
+  if (hour < 17) return '下午好'
+  if (hour < 19) return '傍晚好'
+  return '晚上好'
+})
+
+const statsLoading = ref(false)
+const statsData = ref({
+  onlinePlayers: 0,
+  maxPlayers: 100,
+  totalUsers: 0,
+  boundUsers: 0,
+  totalProducts: 0,
+  activeProducts: 0,
+  totalOrders: 0,
+  completedOrders: 0,
+  refundedOrders: 0,
+  totalRevenue: 0,
+  activeListings: 0,
+  totalTrades: 0,
+  completedTrades: 0,
+  totalTradeVolume: 0,
+  totalRedeemCodes: 0,
+  totalRedeemUses: 0
+})
+
+const playerPercentage = computed(() => {
+  if (!statsData.value.maxPlayers) return 0
+  return (statsData.value.onlinePlayers / statsData.value.maxPlayers) * 100
+})
+
+const orderCompletionRate = computed(() => {
+  if (!statsData.value.totalOrders) return 0
+  return Math.round((statsData.value.completedOrders / statsData.value.totalOrders) * 100)
+})
+
+const c2cCompletionRate = computed(() => {
+  const total = statsData.value.completedTrades + statsData.value.activeListings
+  if (!total) return 0
+  return Math.round((statsData.value.completedTrades / total) * 100)
+})
+
+const fetchOverviewStats = async () => {
+  statsLoading.value = true
+  try {
+    const res = await adminApi.getOverviewStats()
+    if (res && res.data) {
+      statsData.value = res.data
+    }
+  } catch (err: any) {
+    const msg = err.response?.data?.message || err.message || '未知错误'
+    showSnackbar('加载系统统计数据失败: ' + msg, 'error')
+  } finally {
+    statsLoading.value = false
   }
-])
+}
+
+const refreshDashboard = async () => {
+  await Promise.all([
+    fetchOverviewStats(),
+    handleLoadRedeemList(),
+    handleLoadAuditList()
+  ])
+  showSnackbar('控制台数据刷新成功！', 'success')
+}
 
 const handleAnnounce = async () => {
   if (!announceFormRef.value) return
@@ -787,6 +974,7 @@ const formatTime = (timeStr: string) => {
 
 onMounted(async () => {
   await Promise.all([
+    fetchOverviewStats(),
     handleLoadRedeemList(),
     handleLoadAuditList()
   ])
@@ -896,18 +1084,34 @@ onMounted(async () => {
   margin-top: 2px;
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) forwards;
+.text-xxs {
+  font-size: 0.68rem !important;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(12px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.hero-gradient {
+  background: linear-gradient(135deg, rgba(var(--v-theme-primary), 0.04) 0%, rgba(var(--v-theme-secondary), 0.04) 100%) !important;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: radial-gradient(circle at 100% 0%, rgba(var(--v-theme-primary), 0.06) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.border-white-glow {
+  box-shadow: 0 0 10px rgba(var(--v-theme-primary), 0.12) !important;
+  border: 2px solid rgba(255, 255, 255, 0.45) !important;
+}
+
+.text-left {
+  text-align: left !important;
+}
+
+.w-100 {
+  width: 100% !important;
 }
 </style>

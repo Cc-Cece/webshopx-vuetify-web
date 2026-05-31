@@ -1020,8 +1020,23 @@ const handleLoadListings = async () => {
   salesLoading.value = true
   try {
     const res = await adminApi.getMarketListings()
-    if (res && res.data && (Array.isArray(res.data) || res.data.list)) {
-      listings.value = res.data.list || res.data || []
+    const dataList = res?.data?.listings || res?.data?.list || res?.data
+    if (dataList && Array.isArray(dataList)) {
+      listings.value = dataList.map((item: any) => ({
+        id: item.id,
+        material: item.itemMaterial,
+        displayName: item.displayNameOverride || item.displayMaterial || item.itemMaterial,
+        quantity: item.quantity,
+        tradeType: item.side,
+        price: item.price,
+        currency: item.currency,
+        sellerName: item.sellerName,
+        sellerUuid: item.sellerUuid,
+        buyerName: item.buyerName,
+        comment: item.remark,
+        status: item.status,
+        iconUrl: item.displayIconPath || ''
+      }))
     } else {
       listings.value = [...mockListings.value]
     }
@@ -1108,7 +1123,7 @@ const handleForceUnlist = async () => {
   unlistLoading.value = true
   try {
     try {
-      await adminApi.forceUnlistMarketListing({ id: targetUnlistListing.value.id })
+      await adminApi.forceUnlistMarketListing({ listingId: targetUnlistListing.value.id })
       showSnackbar(`挂单 #${targetUnlistListing.value.id} 强制下架成功！`, 'success')
     } catch (err: any) {
       console.warn('API force unlist failed, updating local mock state:', err)
@@ -1334,8 +1349,13 @@ const handleLoadOverrides = async () => {
   overridesLoading.value = true
   try {
     const res = await adminApi.getMaterialOverridesList()
-    if (res && res.data && (Array.isArray(res.data) || res.data.list)) {
-      overrides.value = res.data.list || res.data || []
+    const dataList = res?.data?.overrides || res?.data?.list || res?.data
+    if (dataList && Array.isArray(dataList)) {
+      overrides.value = dataList.map((item: any) => ({
+        materialKey: item.materialKey,
+        displayName: item.displayNameOverride || '',
+        iconUrl: item.iconPath || ''
+      }))
     } else {
       overrides.value = [...mockOverrides.value]
     }
@@ -1384,19 +1404,24 @@ const handleSaveOverride = async () => {
   try {
     const payload = {
       materialKey: formOverride.value.materialKey,
-      displayName: formOverride.value.displayName,
-      iconUrl: formOverride.value.iconUrl
+      displayNameOverride: formOverride.value.displayName,
+      iconPath: formOverride.value.iconUrl
     }
     try {
       await adminApi.upsertMaterialOverride(payload)
       showSnackbar('材质对照译名已保存！', 'success')
     } catch (err: any) {
       console.warn('API error saving override, saving to local mock:', err)
-      const idx = overrides.value.findIndex(item => item.materialKey === payload.materialKey)
+      const mockPayload = {
+        materialKey: formOverride.value.materialKey,
+        displayName: formOverride.value.displayName,
+        iconUrl: formOverride.value.iconUrl
+      }
+      const idx = overrides.value.findIndex(item => item.materialKey === mockPayload.materialKey)
       if (idx !== -1) {
-        overrides.value[idx] = { ...overrides.value[idx], ...payload }
+        overrides.value[idx] = { ...overrides.value[idx], ...mockPayload }
       } else {
-        overrides.value.push(payload)
+        overrides.value.push(mockPayload)
       }
       showSnackbar(`保存对照译名失败（已在本地内存模拟保存临时生效）：${err.message || '网络连接异常'}`, 'warning')
     }
@@ -1627,7 +1652,7 @@ const handleApplyCropAndUpload = async () => {
           croppedFile
         )
         if (res && res.data) {
-          formOverride.value.iconUrl = res.data.iconUrl || ''
+          formOverride.value.iconUrl = res.data.iconPath || ''
           showSnackbar('材质对照图标上传及绑定成功！', 'success')
           cropDialog.value = false
           await handleLoadOverrides() // Refresh lists
